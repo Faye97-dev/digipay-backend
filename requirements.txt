@@ -4,5 +4,5 @@ whitenoise==5.2.0
 psycopg2==2.8.4
 django-cors-headers==3.5.0
 djangorestframework==3.12.2
-djangorestframework-simplejwt==4.4.0
+djangorestframework-simplejwt==4.3.0
 django-filter==2.4.0
