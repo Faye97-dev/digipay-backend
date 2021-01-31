@@ -34,7 +34,7 @@ urlpatterns = [
     path('func/transfert/error/', error_transfert),
     path('func/retrait/add/', add_retrait),
     path('func/transfert/add_atomic/', add_transfert_atomic),
-    path('', home),
+    #path('', home),
 ]
 
 urlpatterns += router.urls
