@@ -1,0 +1,64 @@
+{% load static %} {% csrf_token %}
+<!DOCTYPE html>
+<html lang="en" id="html-div">
+  <head>
+    <!-- Title -->
+    <title>My Testing Api</title>
+
+    <!-- Required Meta Tags Always Come First -->
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
+  </head>
+
+  <body>
+    <form>
+      <label for="post_data">Post data:</label><br />
+      <textarea type="text" id="post_data" name="post_data">
+            {"categorie_transaction": "INF_3000",
+              "agence_destination": 1,
+              "destinataire": 2,
+              "expediteur": null,
+              "montant": 100,
+              "frais_origine": 10,
+              "frais_destination": 20,
+              "remarque": "remarque",
+              "note": " ..... "
+            }
+ 
+ </textarea
+      >
+      <a href="#" id="post">Post</a>
+    </form>
+
+    <script src="{% static 'routing/jquery.min.js' %}"></script>
+    <script src="{% static 'routing/gplfwk.js' %}"></script>
+    <script>
+      $("#post").on("click", function () {
+        var data = $("#post_data").val().trim();
+        data = JSON.parse(data);
+        //console.log(JSON.stringify({ test: "gggg" }), data);
+        var csrftoken = jQuery("[name=csrfmiddlewaretoken]").val();
+        //console.log(csrftoken);
+        ServiceBakend.ajax.SendData(
+          "func/transfert/add/",
+          "data=" + JSON.stringify(data),
+          csrftoken,
+          (e) => console.log(e),
+          (e) => console.log(e.responseText)
+        );
+      });
+
+      /*{"status": "CANCELED", 
+        "categorie_transaction": "NF_3000",
+        "agence_origine": 2, 
+        "agence_destination": 3, 
+        "destinataire": 1}*/
+
+      /*{ "id": 1 , "agence_origine": 3, "agence_destination": 2, "destinataire": 1}*/
+    </script>
+  </body>
+</html>
