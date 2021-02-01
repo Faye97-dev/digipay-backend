@@ -1,6 +1,6 @@
 from django.db import models
 # Create your models here.
-HOST = 'http://127.0.0.1:8000/'
+HOST = "https://digipaybackend.herokuapp.com/"  # 'http://127.0.0.1:8000/'
 #HOST = 'http://192.168.1.28:8000/'
 # http://192.168.1.28:3000/
 
