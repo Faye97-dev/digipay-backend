@@ -24,7 +24,7 @@ class Agent_UserCreate(APIView):
         serializer = Agent_UserSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            print(user)
+            # print(user)
             if user:
                 json = serializer.data
                 return Response(json, status=status.HTTP_201_CREATED)
@@ -38,7 +38,7 @@ class Employe_UserCreate(APIView):
         serializer = Employe_UserSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            print(user)
+            # print(user)
             if user:
                 json = serializer.data
                 return Response(json, status=status.HTTP_201_CREATED)
@@ -52,7 +52,35 @@ class Responsable_UserCreate(APIView):
         serializer = Responsable_UserSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            print(user)
+            # print(user)
+            if user:
+                json = serializer.data
+                return Response(json, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ClientDigiPay_UserCreate(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, format='json'):
+        serializer = ClientDigiPay_UserSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            # print(user)
+            if user:
+                json = serializer.data
+                return Response(json, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class Vendor_UserCreate(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, format='json'):
+        serializer = Vendor_UserSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            # print(user)
             if user:
                 json = serializer.data
                 return Response(json, status=status.HTTP_201_CREATED)
@@ -87,6 +115,14 @@ class currentUserRetriveAPIViews(generics.RetrieveAPIView):
         elif self.request.user.role == MyUser.EMPLOYE_AGENCE:
             self.serializer_class = EmployeFullSerializer
             return Employee.objects.get(pk=self.request.user.id)
+
+        elif self.request.user.role == MyUser.VENDOR:
+            self.serializer_class = Vendor_UserSerializer
+            return Vendor.objects.get(pk=self.request.user.id)
+
+        elif self.request.user.role == MyUser.CLIENT:
+            self.serializer_class = ClientDigiPay_UserSerializer
+            return Client_DigiPay.objects.get(pk=self.request.user.id)
 
         return {}
 

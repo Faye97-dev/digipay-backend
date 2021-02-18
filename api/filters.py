@@ -1,5 +1,5 @@
 from django_filters import rest_framework as filters
-from users.models import Transfert, Compensation, Transaction, Cloture, Client
+from users.models import Transfert, Compensation, Transaction, Cloture, Client, Notification
 from .models import Agence
 
 
@@ -8,6 +8,15 @@ class ClientFilter(filters.FilterSet):
     class Meta:
         model = Client
         fields = ['tel']
+
+
+class NotificationFilter(filters.FilterSet):
+    min_date = filters.DateTimeFilter(field_name="date", lookup_expr='gte')
+    max_date = filters.DateTimeFilter(field_name="date", lookup_expr='lte')
+
+    class Meta:
+        model = Notification
+        fields = ['user', 'transaction', 'status', 'min_date', 'max_date']
 
 
 class TransfertFilter(filters.FilterSet):
@@ -26,7 +35,7 @@ class TransfertFilter(filters.FilterSet):
 class CompensationFilter(filters.FilterSet):
     class Meta:
         model = Compensation
-        fields = ['type_transaction', 'status', 'agent',
+        fields = ['status', 'agent',
                   'agence', 'is_edited', 'user_created', 'user_edited']
 
 
@@ -36,7 +45,7 @@ class TransactionFilter(filters.FilterSet):
 
     class Meta:
         model = Transaction
-        fields = ['agence', 'type_transaction', 'categorie_transaction',
+        fields = ['type_transaction', 'categorie_transaction',
                   'min_date', 'max_date']
 
 

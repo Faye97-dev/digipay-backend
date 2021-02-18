@@ -2,13 +2,15 @@ from django.urls import path
 from rest_framework import routers
 from .views import *
 from .actions import *
-
+from .service import *
 router = routers.DefaultRouter()
 router.register('client', ClientViewsets)
 router.register('cloture', ClotureViewsets)
 
 urlpatterns = [
     path('commune/list/', CommuneAPIViews.as_view()),
+
+    path('notification/list/', NotificationListAPIViews.as_view()),
 
     path('agence/list/', AgenceListAPIViews.as_view()),
     path('agence/update/<int:pk>/', AgenceUpdateAPIViews.as_view()),
@@ -29,12 +31,22 @@ urlpatterns = [
     path('transaction/get/<int:pk>/', TransactionRetriveAPIViews.as_view()),
     path('transaction/create/', TransactionCreateAPIViews.as_view()),
 
+
+    ###
+    path('func/transaction/retrait_list/', transactions_a_retirer),
+    path('func/transaction/secret_key_check/', check_secret_key),
     ###
     path('func/transfert/add/', add_transfert),
     path('func/transfert/error/', error_transfert),
     path('func/retrait/add/', add_retrait),
-    path('func/transfert/add_atomic/', add_transfert_atomic),
-    #path('', home),
+    ##
+    path('func/client_digiPay/check/', check_clientDigiPay),
+    path('func/client_digiPay/envoie/', client_digiPay_envoie),
+    # retrait dans une agence
+    path('func/client/retrait_par_sms/', client_parSmsRetrait),
+
+    ###
+    path('', home),
 ]
 
 urlpatterns += router.urls

@@ -2,8 +2,10 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from .models import HOST
 from django.http import JsonResponse, HttpResponse
 import requests
-from users.models import Transfert, Transaction
+from users.models import Transfert, Transaction, Client_DigiPay, Pre_Transaction, Transfert_Direct
 from .models import *
+from .serializers import TransfertFullSerializer
+from users.serializers import PreTransactionFullSerializer
 import json
 
 
@@ -23,12 +25,99 @@ def send_request(url, data, method, headers=None):
 
 
 @csrf_exempt
+def check_secret_key(request):
+    if request.method == 'POST':
+        data = json.loads(request.body.decode('utf-8'))
+        try:
+            result = {'checked': False}
+            if data['model_transaction'] == 'TRANSFERT':
+                transaction = Transfert.objects.get(id=data['id'])
+            elif data['model_transaction'] == 'TRANSFERT_DIRECT':
+                transaction = Transfert_Direct.objects.get(id=data['id'])
+            elif data['model_transaction'] == 'PRE_TRANSACTION':
+                transaction = Pre_Transaction.objects.get(id=data['id'])
+            else:
+                return JsonResponse({'msg': ' Invalid Json format !'}, safe=False, status=400)
+
+            if transaction.code_secret == data['secret_key']:
+                result = {'checked': True}
+            return JsonResponse(result, safe=False, status=200)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)
+
+
+@csrf_exempt
+def transactions_a_retirer(request):
+    # sort data by  - date
+    if request.method == 'POST':
+        data = json.loads(request.body.decode('utf-8'))
+        try:
+            agence = Agence.objects.get(id=data['agence_destination'])
+            retraits = Transfert.objects.filter(agence_destination=agence,
+                                                destinataire__tel=data['tel'], status=Transfert.NOT_WITHDRAWED).order_by('-date_creation')
+
+            pre_retraits = Pre_Transaction.objects.filter(
+                type_transaction=Pre_Transaction.RETRAIT, status=Pre_Transaction.TO_VALIDATE, destinataire=data['tel']).order_by('-date_creation')
+            print(retraits, pre_retraits)
+
+            result = TransfertFullSerializer(
+                retraits, many=True).data + PreTransactionFullSerializer(pre_retraits, many=True).data
+            return JsonResponse(result, safe=False, status=200)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)
+
+
+@csrf_exempt
 def add_transfert_atomic(request):
     form = request.POST['data']
     data = json.loads(form)
     data['status'] = 'NOT_WITHDRAWED'
     new_transfert = Transfert.add_transfert(data)
     print(new_transfert)
+
+
+@csrf_exempt
+def client_digiPay_envoie(request):
+    if request.method == 'POST':
+        data = json.loads(request.body.decode('utf-8'))
+        try:
+            if 'client_destinataire' in data.keys():
+                client = Client_DigiPay.objects.get(id=data['client_origine'])
+                result = client.envoyer(
+                    data['client_destinataire'], data['montant'])
+                return JsonResponse(result, safe=False, status=201)
+            elif 'tel' in data.keys():
+                client = Client_DigiPay.objects.get(id=data['client_origine'])
+                result = client.envoyer_par_sms(
+                    data['tel'], data['montant'])
+
+                return JsonResponse(result, safe=False, status=201)
+            else:
+                return JsonResponse({'msg': ' Json data invalid !'}, safe=False, status=400)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)
+
+
+@csrf_exempt
+def client_parSmsRetrait(request):
+    if request.method == 'POST':
+        data = json.loads(request.body.decode('utf-8'))
+        try:
+            pre_transaction = Pre_Transaction.objects.get(
+                id=data['pre_transaction'])
+            result = pre_transaction.client_retrait(
+                data['agence_destination'], data['nom_destinataire'])
+            return JsonResponse(result, safe=False, status=201)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)
 
 
 @csrf_exempt
@@ -54,7 +143,7 @@ def add_transfert(request):
                 "categorie_transaction": add_transfert[0]['categorie_transaction'],
                 "type_transaction": Transaction.TRANSFERT,
                 "date": add_transfert[0]['date_creation'],
-                "agence": add_transfert[0]['agence_origine'],
+                # "agence": add_transfert[0]['agence_origine'],
                 "transaction": add_transfert[0]['id']
             }
             add_transaction = send_request(
@@ -162,7 +251,7 @@ def add_retrait(request):
                 "categorie_transaction": add_retrait[0]['categorie_transaction'],
                 "type_transaction": Transaction.RETRAIT,
                 "date": add_retrait[0]['date_modifcation'],
-                "agence": add_retrait[0]['agence_destination'],
+                # "agence": add_retrait[0]['agence_destination'],
                 "transaction": add_retrait[0]['id']
             }
             add_transaction = send_request(

@@ -1,7 +1,7 @@
 from django.forms.models import model_to_dict
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework import serializers
-from users.models import MyUser, Agent, Employee, Responsable, Compensation
+from users.models import MyUser, Agent, Employee, Responsable, Compensation, Client_DigiPay, Client, Vendor, Transfert_Direct, Pre_Transaction
 from api.models import Agence
 from api.serializers import AgenceSerializer, AgenceFullSerializer
 
@@ -91,6 +91,63 @@ class Responsable_UserSerializer(serializers.ModelSerializer):
 
         return instance
 
+
+class ClientDigiPay_UserSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(required=True)
+    last_name = serializers.CharField(required=True)
+    tel = serializers.CharField(required=True)
+    password = serializers.CharField(min_length=8, write_only=True)
+
+    class Meta:
+        model = Client_DigiPay
+        fields = ('id', 'username', 'first_name', 'last_name',
+                  'role', 'password', 'tel', 'email', 'adresse', 'solde', 'client', 'start_date', 'is_active', 'last_login')
+        extra_kwargs = {'password': {'write_only': True},
+                        'id': {'read_only': True}, 'start_date': {'read_only': True}, 'last_login': {'read_only': True}}
+
+    def create(self, validated_data):
+        password = validated_data.pop('password', None)
+        instance = self.Meta.model(**validated_data)
+
+        if password is not None:
+            instance.set_password(password)
+        instance.save()
+        ##
+        client = Client(nom=instance.first_name + ' ' +
+                        instance.last_name, tel=instance.tel)
+        client.save()
+        ##
+        instance.client = client.id
+        instance.save()
+        return instance
+
+
+class Vendor_UserSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(required=True)
+    tel = serializers.CharField(required=True)
+    password = serializers.CharField(min_length=8, write_only=True)
+
+    class Meta:
+        model = Vendor
+        fields = ('id', 'username', 'first_name', 'last_name',
+                  'role', 'password', 'tel', 'email', 'adresse', 'solde', 'client', 'start_date', 'is_active', 'last_login')
+        extra_kwargs = {'password': {'write_only': True},
+                        'id': {'read_only': True}, 'start_date': {'read_only': True}, 'last_login': {'read_only': True}}
+
+    def create(self, validated_data):
+        password = validated_data.pop('password', None)
+        instance = self.Meta.model(**validated_data)
+
+        if password is not None:
+            instance.set_password(password)
+        instance.save()
+        ##
+        client = Client(nom=instance.first_name, tel=instance.tel)
+        client.save()
+        ##
+        instance.client = client.id
+        instance.save()
+        return instance
 # login
 
 
@@ -108,19 +165,55 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             responsable = Responsable.objects.get(id=self.user.id)
             agence = Agence.objects.get(responsable__id=self.user.id)
             data['agence'] = model_to_dict(agence)
+            data['agence']['last_date_cloture'] = data['agence']['last_date_cloture'].strftime(
+                "%d-%m-%Y %H:%M:%S") if data['agence']['last_date_cloture'] else data['agence']['last_date_cloture']
+            # print(data['agence']['last_date_cloture'])
             data.update(model_to_dict(responsable, fields=['id', 'username', 'first_name', 'last_name',
                                                            'role', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
+            data['last_login'] = data['last_login'].strftime(
+                "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
+            data['start_date'] = data['start_date'].strftime(
+                "%d-%m-%Y %H:%M:%S") if data['start_date'] else data['start_date']
+
         elif self.user.role == MyUser.EMPLOYE_AGENCE:
             employe = Employee.objects.get(id=self.user.id)
             agence = Agence.objects.get(employes__id=self.user.id)
             data['agence'] = model_to_dict(agence)
+            data['agence']['last_date_cloture'] = data['agence']['last_date_cloture'].strftime(
+                "%d-%m-%Y %H:%M:%S") if data['agence']['last_date_cloture'] else data['agence']['last_date_cloture']
             data.update(model_to_dict(employe, fields=['id', 'username', 'first_name', 'last_name',
                                                        'role', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
+            data['last_login'] = data['last_login'].strftime(
+                "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
+            data['start_date'] = data['start_date'].strftime(
+                "%d-%m-%Y %H:%M:%S") if data['start_date'] else data['start_date']
+
         elif self.user.role == MyUser.AGENT_COMPENSATION:
             agent = Agent.objects.get(id=self.user.id)
             data.update(model_to_dict(agent, fields=['id', 'username', 'first_name', 'last_name',
                                                      'role', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
+            data['last_login'] = data['last_login'].strftime(
+                "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
+            data['start_date'] = data['start_date'].strftime(
+                "%d-%m-%Y %H:%M:%S") if data['start_date'] else data['start_date']
 
+        elif self.user.role == MyUser.VENDOR:
+            vendor = Vendor.objects.get(id=self.user.id)
+            data.update(model_to_dict(vendor, fields=['id', 'username', 'first_name', 'last_name',
+                                                      'role', 'tel', 'solde', 'client', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
+            data['last_login'] = data['last_login'].strftime(
+                "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
+            data['start_date'] = data['start_date'].strftime(
+                "%d-%m-%Y %H:%M:%S") if data['start_date'] else data['start_date']
+
+        elif self.user.role == MyUser.CLIENT:
+            client = Client_DigiPay.objects.get(id=self.user.id)
+            data.update(model_to_dict(client, fields=['id', 'username', 'first_name', 'last_name',
+                                                      'role', 'tel', 'solde', 'client', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
+            data['last_login'] = data['last_login'].strftime(
+                "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
+            data['start_date'] = data['start_date'].strftime(
+                "%d-%m-%Y %H:%M:%S") if data['start_date'] else data['start_date']
         return data
 
 
@@ -137,6 +230,69 @@ class CompensationFullSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
+        fields = ('id', 'username', 'first_name', 'last_name', 'role')
+
+# transfert direct serializer ...
+
+
+class TransfertDirectFullSerializer(serializers.ModelSerializer):
+    # Hide not used attributes in exp et dest ...
+    # move to models ??
+    expediteur = serializers.SerializerMethodField()
+    destinataire = serializers.SerializerMethodField()
+    code_secret = serializers.CharField()
+
+    class Meta:
+        model = Transfert_Direct
         fields = '__all__'
+
+    def get_expediteur(self, instance):
+        data = {}
+        if instance.expediteur.role == MyUser.CLIENT:
+            client = Client_DigiPay.objects.get(id=instance.expediteur.id)
+            data = ClientDigiPay_UserSerializer(client).data
+            return data
+        elif instance.expediteur.role == MyUser.VENDOR:
+            vendor = Vendor.objects.get(id=instance.expediteur.id)
+            data = Vendor_UserSerializer(vendor).data
+            return data
+        else:
+            return instance.expediteur.id
+
+    def get_destinataire(self, instance):
+        data = {}
+        if instance.destinataire.role == MyUser.CLIENT:
+            client = Client_DigiPay.objects.get(id=instance.destinataire.id)
+            data = ClientDigiPay_UserSerializer(client).data
+            return data
+        elif instance.destinataire.role == MyUser.VENDOR:
+            vendor = Vendor.objects.get(id=instance.destinataire.id)
+            data = Vendor_UserSerializer(vendor).data
+            return data
+        else:
+            return instance.destinataire.id
+
+
+class PreTransactionFullSerializer(serializers.ModelSerializer):
+    expediteur = serializers.SerializerMethodField()
+    code_secret = serializers.CharField()
+
+    class Meta:
+        model = Pre_Transaction
+        fields = '__all__'
+
+    def get_expediteur(self, instance):
+        data = {}
+        if instance.expediteur.role == MyUser.CLIENT:
+            client = Client_DigiPay.objects.get(id=instance.expediteur.id)
+            data = ClientDigiPay_UserSerializer(client).data
+            return data
+        elif instance.expediteur.role == MyUser.VENDOR:
+            vendor = Vendor.objects.get(id=instance.expediteur.id)
+            data = Vendor_UserSerializer(vendor).data
+            return data
+        else:
+            return instance.expediteur.id
+
 
 # todo List , Update , Get , change pwsd :  ( create : responsable ) , employee , agent

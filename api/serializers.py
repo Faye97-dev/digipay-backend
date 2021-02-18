@@ -1,7 +1,7 @@
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework import serializers
+from users.models import Client, Transfert, Compensation, Cloture, Transaction, Notification
 from .models import Agence, Commune
-from users.models import Client, Transfert, Compensation, Cloture, Transaction
+from rest_framework import serializers
+# from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 
 class CommuneSerializer(serializers.ModelSerializer):
@@ -40,11 +40,21 @@ class TransfertFullSerializer(serializers.ModelSerializer):
     agence_origine = AgenceFullSerializer()
     agence_destination = AgenceFullSerializer()
     destinataire = ClientSerializer()
+    expediteur = serializers.SerializerMethodField()
     code_secret = serializers.CharField()
 
     class Meta:
         model = Transfert
         fields = '__all__'
+
+    def get_expediteur(self, instance):
+        data = {}
+        if instance.expediteur:
+            client = Client.objects.get(id=instance.expediteur)
+            data = ClientSerializer(client).data
+            return data
+        else:
+            return None
 
 
 class CompensationSerializer(serializers.ModelSerializer):
@@ -70,8 +80,16 @@ class TransactionSerializer(serializers.ModelSerializer):
 
 class TransactionFullSerializer(serializers.ModelSerializer):
     #agence = AgenceFullSerializer()
+    # to moved ....
     code_transaction = serializers.CharField()
 
     class Meta:
         model = Transaction
+        fields = '__all__'
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Notification
         fields = '__all__'

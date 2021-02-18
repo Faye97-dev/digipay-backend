@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import MyUser, Responsable, Agent, Employee, Agent, Transaction, Transfert, Compensation, Client
+from .models import MyUser, Responsable, Agent, Employee, Agent, Transaction, Transfert, Compensation, Client, Client_DigiPay, Vendor, Notification, Transfert_Direct, Pre_Transaction
 from api.models import Agence, Commune
 # Register your models here.
 admin.site.register(MyUser)
@@ -14,3 +14,9 @@ admin.site.register(Transfert)
 admin.site.register(Compensation)
 
 admin.site.register(Client)
+admin.site.register(Client_DigiPay)
+admin.site.register(Vendor)
+
+admin.site.register(Notification)
+admin.site.register(Pre_Transaction)
+admin.site.register(Transfert_Direct)

@@ -1,1 +1,1 @@
- web: gunicorn fes_app.wsgi --log-file -
+web: gunicorn fes_app.wsgi --log-file -
