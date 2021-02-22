@@ -3,6 +3,7 @@ from rest_framework import routers
 from .views import *
 from .actions import *
 from .service import *
+from .agence.views import *
 router = routers.DefaultRouter()
 router.register('client', ClientViewsets)
 router.register('cloture', ClotureViewsets)
@@ -36,9 +37,11 @@ urlpatterns = [
     path('func/transaction/retrait_list/', transactions_a_retirer),
     path('func/transaction/secret_key_check/', check_secret_key),
     ###
-    path('func/transfert/add/', add_transfert),
-    path('func/transfert/error/', error_transfert),
-    path('func/retrait/add/', add_retrait),
+    #path('func/transfert/add/', add_transfert),
+    path('func/transfert/add/', agence_transfert),
+    #path('func/transfert/error/', error_transfert),
+    #path('func/retrait/add/', add_retrait),
+    path('func/retrait/add/', agence_retrait),
     ##
     path('func/client_digiPay/check/', check_clientDigiPay),
     path('func/client_digiPay/envoie/', client_digiPay_envoie),
