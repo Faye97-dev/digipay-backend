@@ -185,12 +185,12 @@ class Client_DigiPay(MyUser, PermissionsMixin):
             # notifications
             msgSelf = Notification(
                 user=self, transaction=transfert, status=Notification.ENVOI,
-                message="Vous avez effectuer un envoi de " + str(montant) + " MRU vers " + Client.name + ' (' + Client.tel+')')
+                message="Vous avez effectué un envoi de " + str(montant) + " MRU vers " + Client.name + ' (' + Client.tel+')')
             msgSelf.save()
 
             msgClient = Notification(
                 user=Client, transaction=transfert, status=Notification.ENVOI,
-                message="Vous avez recu un montant de " + str(montant) + " MRU de " + self.name + ' (' + self.tel+')')
+                message="Vous avez reçu un montant de " + str(montant) + " MRU de " + self.name + ' (' + self.tel+')')
             msgClient.save()
 
             return result
@@ -214,7 +214,7 @@ class Client_DigiPay(MyUser, PermissionsMixin):
             # notifications
             msgSelf = Notification(
                 user=self, transaction=pre_transaction, status=Notification.DEMANDE_RETRAIT,
-                message="Vous avez envoyer une demande de retrait de " + str(montant) + " MRU au numero " + str(tel) + ' avec le code confirmation: '+pre_transaction.code_secret)
+                message="Vous avez envoyé une demande de retrait de " + str(montant) + " MRU au numéro " + str(tel) + ' avec le code confirmation: '+pre_transaction.code_secret)
             msgSelf.save()
 
             # envoie de sms au numero de tel twiolio
@@ -350,20 +350,6 @@ class Transfert(TransactionModel):
     )
     code_secret = models.CharField(max_length=200, blank=True, default='')
 
-    def add_transfert(self, *args, **kwargs):
-        return super(Transfert, self).save(*args, **kwargs)
-        '''item = Transfert(agence_origine=data['agence_origine'],
-            agence_destination=data['agence_destination'],
-            destinataire=data['destinataire'],
-            categorie_transaction=data['categorie_transaction'],
-            status=data['status'],
-            solde=data['solde'],
-            frais_origine=data['frais_origine'],
-            frais_destination=data['frais_destination'],
-            remarque=data['remarque'],
-            note=data['note'])
-        '''
-
     # @property
     # def code_secret(self):
     #    return str(uuid.uuid4().hex[:6].upper())
@@ -439,9 +425,9 @@ class Pre_Transaction(TransactionModel):
                     user=expediteur, transaction=transfert, status=Notification.RETRAIT,
                     message="Un retrait de " +
                     str(self.montant) +
-                    " MRU est enregistrer sur votre compte effectuer par "
+                    " MRU été enregistrer sur votre compte venant de "
                     + destinataire.nom + " (" +
-                    str(destinataire.tel) + ") de l'agence "
+                    str(destinataire.tel) + ") chez l'agence "
                     + agence_destination.nom + ' (' + agence_destination.code_agence+')')
                 msgSelf.save()
 

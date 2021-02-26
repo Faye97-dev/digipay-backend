@@ -55,12 +55,16 @@ def transactions_a_retirer(request):
         data = json.loads(request.body.decode('utf-8'))
         try:
             agence = Agence.objects.get(id=data['agence_destination'])
+
             retraits = Transfert.objects.filter(agence_destination=agence,
                                                 destinataire__tel=data['tel'], status=Transfert.NOT_WITHDRAWED).order_by('-date_creation')
-
+            '''
+            retraits = Transfert.objects.filter(
+                destinataire__tel=data['tel'], status=Transfert.NOT_WITHDRAWED).order_by('-date_creation')
+            '''
             pre_retraits = Pre_Transaction.objects.filter(
                 type_transaction=Pre_Transaction.RETRAIT, status=Pre_Transaction.TO_VALIDATE, destinataire=data['tel']).order_by('-date_creation')
-            print(retraits, pre_retraits)
+            #print(retraits, pre_retraits)
 
             result = TransfertFullSerializer(
                 retraits, many=True).data + PreTransactionFullSerializer(pre_retraits, many=True).data

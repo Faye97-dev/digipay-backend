@@ -156,12 +156,18 @@ class TransactionListAPIViews(generics.ListAPIView):
                 transaction__id__in=list(set(transferts+retraits))).order_by('-date')
             return res
         elif self.request.user.role == MyUser.CLIENT:
-            # handle some cases .... when expediteur is a digiPay client do a transfert and retrait ??
+            # handle some cases .... when expediteur is a digiPay client can do a transfert and retrait ??
             user = Client_DigiPay.objects.get(id=self.request.user.id)
+            client_fictif = Client.objects.get(id=user.client)
+            ###
             retraits_agence = Transfert.objects.filter(expediteur=user.client)
-            #print(' before condition ', retraits_agence)
             retraits_agence = [item.id for item in list(
-                retraits_agence) if item.agence_destination == item.agence_origine]
+                retraits_agence) if item.agence_destination == item.agence_origine]  # type_transaction est RETRAIT par sms
+
+            recharges_agence = Transfert.objects.filter(
+                destinataire=client_fictif)
+            recharges_agence = [item.id for item in list(
+                recharges_agence) if item.agence_destination == item.agence_origine]
 
             # retraits_agence = [item.id for item in list(
             # Transfert.objects.filter(expediteur=user.client))]
@@ -172,9 +178,26 @@ class TransactionListAPIViews(generics.ListAPIView):
                 expediteur=user))]
             retraits = [item.id for item in list(Transfert_Direct.objects.filter(
                 destinataire=user))]
-            print(retraits_agence, transferts, retraits)
+            print(retraits_agence, recharges_agence, transferts, retraits)
             res = Transaction.objects.filter(
-                transaction__id__in=list(set(retraits_agence+transferts+retraits))).order_by('-date')
+                transaction__id__in=list(set(retraits_agence+recharges_agence+transferts+retraits))).order_by('-date')
+            return res
+        elif self.request.user.role == MyUser.VENDOR:
+            user = Vendor.objects.get(id=self.request.user.id)
+            client_fictif = Client.objects.get(id=user.client)
+
+            recharges_agence = Transfert.objects.filter(
+                destinataire=client_fictif)
+            recharges_agence = [item.id for item in list(
+                recharges_agence) if item.agence_destination == item.agence_origine]
+
+            transferts = [item.id for item in list(Transfert_Direct.objects.filter(
+                expediteur=user))]
+            retraits = [item.id for item in list(Transfert_Direct.objects.filter(
+                destinataire=user))]
+
+            res = Transaction.objects.filter(
+                transaction__id__in=list(set(recharges_agence+transferts+retraits))).order_by('-date')
             return res
         else:
             return []
@@ -187,7 +210,7 @@ class TransactionListAPIViews(generics.ListAPIView):
         for d in serializer.data:
             # if d['type_transaction'] == Transaction.RETRAIT or d['type_transaction'] == Transaction.SUP_3000 or d['type_transaction'] == Transaction.INF_3000:
             # if 'categorie_transaction' in list(d.keys()):
-            if d['type_transaction'] in [Transaction.TRANSFERT, Transaction.RETRAIT]:
+            if d['type_transaction'] in [Transaction.TRANSFERT, Transaction.RETRAIT, Transaction.RECHARGE]:
                 transfert = Transfert.objects.get(id=d['transaction'])
                 d['transaction'] = TransfertFullSerializer(transfert).data
                 data.append(d)
@@ -198,7 +221,7 @@ class TransactionListAPIViews(generics.ListAPIView):
                 d['transaction'] = CompensationFullSerializer(
                     compensation).data
                 data.append(d)
-            elif d['type_transaction'] in [Transaction.ENVOI]:
+            elif d['type_transaction'] in [Transaction.ENVOI, Transaction.PAIEMENT]:
                 transfert = Transfert_Direct.objects.get(
                     id=d['transaction'])
                 d['transaction'] = TransfertDirectFullSerializer(
