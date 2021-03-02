@@ -57,6 +57,7 @@ urlpatterns = [
     path('func/client_digiPay/retrait/', random_code_retrait),
     path('func/client_digiPay/check_codePayement/', check_codePayement),
     path('func/client_digiPay/payement/', client_payement),
+    path('func/client_digiPay/achat_credit/', client_achat_credit),
 
     # retrait dans une agence par un anonyme
     path('func/client/retrait_par_sms/', client_parSmsRetrait),
@@ -64,7 +65,7 @@ urlpatterns = [
     ##
     path('func/vendor/gen_codePayement/', random_code_payement),
     path('func/vendor/check_codePayement/', check_codePayement_vendor),
-    path('func/vendor/payement/', client_payement),
+    path('func/vendor/payement/', vendor_payement),
     ###
     path('', home),
 ]

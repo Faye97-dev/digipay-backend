@@ -30,7 +30,7 @@ def check_codePayement_vendor(request):
             pre_transaction = Pre_Transaction.objects.filter(
                 code_secret=data['code'], status=TransactionModel.TO_VALIDATE)
             if len(list(pre_transaction)) != 0:
-                if pre_transaction.expediteur.id != data['vendorId']:
+                if pre_transaction[0].expediteur.id != data['vendorId']:
                     result = PreTransactionFullSerializer(
                         pre_transaction[0]).data
                     return JsonResponse(result, safe=False, status=200)
@@ -48,11 +48,11 @@ def check_codePayement_vendor(request):
 def vendor_payement(request):
     if request.method == 'POST':
         data = json.loads(request.body.decode('utf-8'))
-        # try:
-        vendor = Vendor.objects.get(id=data['vendor'])
-        result = payement(vendor, data['pre_transaction'])
-        return JsonResponse(result, safe=False, status=201)
-        # except:
-        #    return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+        try:
+            vendor = Vendor.objects.get(id=data['vendor'])
+            result = payement(vendor, data['pre_transaction'])
+            return JsonResponse(result, safe=False, status=201)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
     else:
         return HttpResponse(status=405)
