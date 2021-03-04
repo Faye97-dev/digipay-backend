@@ -221,7 +221,7 @@ class TransactionListAPIViews(generics.ListAPIView):
                 d['transaction'] = CompensationFullSerializer(
                     compensation).data
                 data.append(d)
-            elif d['type_transaction'] in [Transaction.ENVOI, Transaction.PAIEMENT]:
+            elif d['type_transaction'] in [Transaction.ENVOI, Transaction.PAIEMENT, Transaction.REMBOURSEMENT]:
                 transfert = Transfert_Direct.objects.get(
                     id=d['transaction'])
                 d['transaction'] = TransfertDirectFullSerializer(

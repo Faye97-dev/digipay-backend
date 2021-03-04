@@ -1,10 +1,11 @@
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.http import JsonResponse, HttpResponse
-from .actions import code_payement, payement
+from .actions import code_payement, payement, remboursement
 from api.models import Agence
-from users.models import Client_DigiPay, Vendor, MyUser, Pre_Transaction, TransactionModel
-from users.serializers import PreTransactionFullSerializer
-#from .models import *
+from users.models import Client_DigiPay, Vendor, MyUser, Pre_Transaction, TransactionModel, Transaction, Transfert_Direct
+from users.serializers import PreTransactionFullSerializer, TransfertDirectFullSerializer
+from api.serializers import TransactionFullSerializer
+# from .models import *
 import json
 
 
@@ -51,6 +52,50 @@ def vendor_payement(request):
         try:
             vendor = Vendor.objects.get(id=data['vendor'])
             result = payement(vendor, data['pre_transaction'])
+            return JsonResponse(result, safe=False, status=201)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)
+
+
+@csrf_exempt
+def check_codeTransaction(request):
+    if request.method == 'POST':
+        data = json.loads(request.body.decode('utf-8'))
+        try:
+            vendor = MyUser.objects.get(id=data['vendor'])
+            transaction = list(Transaction.objects.filter(
+                type_transaction=Transaction.PAIEMENT, transaction__status=TransactionModel.COMFIRMED))
+            transaction = [
+                item for item in transaction if item.code_transaction == data['numero_transaction'] and
+                Transfert_Direct.objects.get(id=item.transaction.id).destinataire == vendor]
+            transaction
+            if len(transaction) == 0:
+                # todo handle msg by case
+                return JsonResponse({'msg': "Ce code de transaction n'est pas associer a un paiement ou inexistant !"}, safe=False, status=200)
+            else:
+                transaction = transaction[0]
+
+            result = TransactionFullSerializer(transaction).data
+            transfert = Transfert_Direct.objects.get(
+                id=transaction.transaction.id)
+            result['transaction'] = TransfertDirectFullSerializer(
+                transfert).data
+            return JsonResponse(result, safe=False, status=201)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)
+
+
+@csrf_exempt
+def vendor_payback(request):
+    if request.method == 'POST':
+        data = json.loads(request.body.decode('utf-8'))
+        try:
+            vendor = Vendor.objects.get(id=data['vendor'])
+            result = remboursement(vendor, data['transaction'])
             return JsonResponse(result, safe=False, status=201)
         except:
             return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)

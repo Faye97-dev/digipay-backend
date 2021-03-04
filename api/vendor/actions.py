@@ -72,3 +72,47 @@ def payement(commercant_client, pre_transactionId):
         return result
     else:
         return {'msg': "Votre solde est insuffisant pour effectuer cette opération"}
+
+
+def remboursement(vendor, transactionId):
+    prev_transaction = Transaction.objects.get(id=transactionId)
+    prev_transfert = Transfert_Direct.objects.get(
+        id=prev_transaction.transaction.id)
+    ###
+    client = list(Client_DigiPay.objects.filter(
+        id=prev_transfert.expediteur.id))
+    list_vendor = list(Vendor.objects.filter(id=prev_transfert.expediteur.id))
+    if len(client) != 0:
+        sender = client[0]
+    elif len(list_vendor) != 0:
+        sender = list_vendor[0]
+    else:
+        return {'msg': "Type d'utilisateur invalid !"}
+
+    if sender.solde >= prev_transfert.montant:
+        transfert = Transfert_Direct(
+            expediteur=vendor,
+            destinataire=sender,
+            status=TransactionModel.COMFIRMED,
+            montant=prev_transfert.montant)
+        transfert.save()
+
+        transaction = Transaction(
+            transaction=transfert, type_transaction=Transaction.REMBOURSEMENT, date=transfert.date_creation)
+        transaction.save()
+
+        result = TransactionFullSerializer(transaction).data
+        result['transaction'] = TransfertDirectFullSerializer(
+            transfert).data
+
+        vendor.solde -= transfert.montant
+        vendor.save()
+
+        sender.solde += transfert.montant
+        sender.save()
+
+        prev_transfert.status = TransactionModel.CANCELED
+        prev_transfert.save()
+        return result
+    else:
+        return {'msg': "Votre solde est insuffisant pour effectuer cette opération"}

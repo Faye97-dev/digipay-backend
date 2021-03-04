@@ -66,6 +66,8 @@ urlpatterns = [
     path('func/vendor/gen_codePayement/', random_code_payement),
     path('func/vendor/check_codePayement/', check_codePayement_vendor),
     path('func/vendor/payement/', vendor_payement),
+    path('func/vendor/payback/', vendor_payback),
+    path('func/vendor/check_codeTransaction/', check_codeTransaction),
     ###
     path('', home),
 ]
