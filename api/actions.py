@@ -2,7 +2,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from .models import HOST
 from django.http import JsonResponse, HttpResponse
 import requests
-from users.models import Transfert, Transaction, Client_DigiPay, Pre_Transaction, Transfert_Direct
+from users.models import Transfert, Transaction, Client_DigiPay, Pre_Transaction, Transfert_Direct, Client
 from .models import *
 from .serializers import TransfertFullSerializer
 from users.serializers import PreTransactionFullSerializer
@@ -22,6 +22,21 @@ def send_request(url, data, method, headers=None):
 
     result = response.json()
     return [result, response.status_code]
+
+
+@csrf_exempt
+def check_existant_tel(request):
+    if request.method == 'POST':
+        data = json.loads(request.body.decode('utf-8'))
+        try:
+            client = list(Client.objects.filter(tel=data['tel']))
+            result = {'valid_tel': True} if len(client) == 0 else {
+                'valid_tel': False}
+            return JsonResponse(result, safe=False, status=200)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)
 
 
 @csrf_exempt

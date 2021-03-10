@@ -42,6 +42,8 @@ urlpatterns = [
     #path('func/transfert/add/', add_transfert),
     #path('func/transfert/error/', error_transfert),
     #path('func/retrait/add/', add_retrait),
+    path('func/client/check_existant_tel/', check_existant_tel),
+
 
     path('func/transfert/add/', agence_transfert),
     path('func/retrait/add/', agence_retrait),
