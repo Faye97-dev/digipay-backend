@@ -25,7 +25,7 @@ def code_payement(vendor, montant):
 
     #vendor.solde -= montant
     # vendor.save()
-    return {'code_confirmation': "Opération réussie !"}
+    return {'code_confirmation': pre_transaction.code_secret}
 
 
 def payement(commercant_client, pre_transactionId):
