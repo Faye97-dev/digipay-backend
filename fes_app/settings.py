@@ -185,6 +185,7 @@ REST_FRAMEWORK = {
     "DATETIME_FORMAT": "%d-%m-%Y %H:%M:%S",
 }
 
+
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=24),
     'REFRESH_TOKEN_LIFETIME': timedelta(hours=24),
