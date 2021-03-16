@@ -14,6 +14,7 @@ urlpatterns = [
     path('commune/list/', CommuneAPIViews.as_view()),
 
     path('notification/list/', NotificationListAPIViews.as_view()),
+    path('notification/update/<int:pk>/', NotificationUpdateAPIViews.as_view()),
 
     path('agence/list/', AgenceListAPIViews.as_view()),
     path('agence/update/<int:pk>/', AgenceUpdateAPIViews.as_view()),

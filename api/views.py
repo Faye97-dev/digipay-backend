@@ -129,6 +129,12 @@ class NotificationListAPIViews(generics.ListAPIView):
     queryset = Notification.objects.all().order_by('-date')
     filterset_class = NotificationFilter
 
+
+class NotificationUpdateAPIViews(generics.RetrieveUpdateAPIView):
+    serializer_class = NotificationSerializer
+    permission_classes = [AllowAny]
+    queryset = Notification.objects.all().order_by('-date')
+
 # transactions views
 
 

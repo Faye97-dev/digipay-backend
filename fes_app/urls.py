@@ -4,9 +4,10 @@ from users.views import TokenObtainPairView, BlacklistTokenUpdateView, MyTokenOb
 from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
-
+from django.conf import settings
+from django.conf.urls.static import static
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('admin/', admin.site.urls),  # change url of django admin
     path('api/user/', include('users.urls')),
     #path('api/register/', include('rest_framework.urls', namespace='rest_framework')),
     path('api/login/', MyTokenObtainPairView.as_view(),
@@ -14,6 +15,8 @@ urlpatterns = [
     path('api/logout/', BlacklistTokenUpdateView.as_view(), name='blacklist'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/', include('api.urls')),
-
-
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL,
+                          document_root=settings.MEDIA_ROOT)

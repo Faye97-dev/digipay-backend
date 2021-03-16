@@ -1,3 +1,5 @@
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -5,8 +7,8 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseU
 from api.models import Agence, Commune
 import uuid
 from rest_framework import serializers
-#from .serializers import TransfertDirectFullSerializer
-#from api.serializers import TransactionFullSerializer
+# from .serializers import TransfertDirectFullSerializer
+# from api.serializers import TransactionFullSerializer
 
 
 class CustomAccountManager(BaseUserManager):
@@ -31,7 +33,7 @@ class CustomAccountManager(BaseUserManager):
         if not username:
             raise ValueError(_('You must provide an username field'))
 
-        #email = self.normalize_email(email)
+        # email = self.normalize_email(email)
         user = self.model(username=username, last_name=last_name,
                           first_name=first_name, **other_fields)
         user.set_password(password)
@@ -41,8 +43,8 @@ class CustomAccountManager(BaseUserManager):
 
 class MyUser(AbstractBaseUser, PermissionsMixin):
 
-    #SUPER_ADMIN = 'SUPER_ADMIN'
-    #SUPERVISEUR = 'SUPERVISEUR'
+    # SUPER_ADMIN = 'SUPER_ADMIN'
+    # SUPERVISEUR = 'SUPERVISEUR'
     EMPLOYE_AGENCE = 'EMPLOYE_AGENCE'
     RESPONSABLE_AGENCE = 'RESPONSABLE_AGENCE'
     AGENT_COMPENSATION = 'AGENT_COMPENSATION'
@@ -67,7 +69,7 @@ class MyUser(AbstractBaseUser, PermissionsMixin):
     )
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
-    #child_id = models.IntegerField(null=True)
+    # child_id = models.IntegerField(null=True)
 
     objects = CustomAccountManager()
 
@@ -199,7 +201,7 @@ class Client_DigiPay(MyUser, PermissionsMixin):
 
     def envoyer_par_sms(self, tel, montant):
         if self.solde >= montant:
-            #self.solde -= montant
+            # self.solde -= montant
             # self.save()
             code_confirmation = str(uuid.uuid4().hex[:8].upper())
             pre_transaction = Pre_Transaction(
@@ -295,8 +297,8 @@ class TransactionModel(models.Model):
 
 
 class Compensation(TransactionModel):
-    #COMP_VERSEMENT = '03'
-    #COMP_RETRAIT = '04'
+    # COMP_VERSEMENT = '03'
+    # COMP_RETRAIT = '04'
     # TYPES = [
     #   (COMP_VERSEMENT, 'COMP_VERSEMENT'),
     #   (COMP_RETRAIT, 'COMP_RETRAIT'),
@@ -307,7 +309,7 @@ class Compensation(TransactionModel):
     agence = models.ForeignKey(
         Agence, related_name="compensations", on_delete=models.CASCADE)
 
-    #type_transaction = models.CharField(max_length=4,choices=TYPES,)
+    # type_transaction = models.CharField(max_length=4,choices=TYPES,)
 
     class Meta:
         db_table = "compensation"
@@ -353,15 +355,7 @@ class Transfert(TransactionModel):
     # @property
     # def code_secret(self):
     #    return str(uuid.uuid4().hex[:6].upper())
-    '''
-    def confirmer(self, code):
-        if (self.code_secret == code):
-            self.status = TransactionModel.COMFIRMED
-            self.save()
-            return "Paiement confirmé"
-        else:
-            return "Code incorrect !"
-    '''
+
     class Meta:
         db_table = "transfert"
 
@@ -380,16 +374,6 @@ class Pre_Transaction(TransactionModel):
         MyUser, related_name='preTransactions_envoyes', on_delete=models.CASCADE)
     destinataire = models.IntegerField(null=True)
     code_secret = models.CharField(max_length=200, blank=True, default='')
-
-    '''
-    def confirmer(self, code):
-        if (self.code_secret == code):
-            self.status = TransactionModel.COMFIRMED
-            self.save()
-            return "Pre Transaction confirmé"
-        else:
-            return "Code incorrect!"
-    '''
 
     def client_retrait(self, agenceId, nom_destinataire):
         expediteur = Client_DigiPay.objects.get(id=self.expediteur.id)
@@ -451,15 +435,6 @@ class Transfert_Direct(TransactionModel):
         MyUser, related_name='transferts_direct_recus', on_delete=models.CASCADE)
     code_secret = models.CharField(max_length=200, blank=True, default='')
 
-    '''
-    def confirmer(self, code):
-        if (self.code_secret == code):
-            self.status = TransactionModel.COMFIRMED
-            self.save()
-            return "Paiement confirmé"
-        else:
-            return "Code incorrect !"
-    '''
     class Meta:
         db_table = "transfert_direct"
 
@@ -484,9 +459,17 @@ class Notification(models.Model):
     status = models.CharField(
         max_length=50, choices=TAGS, default="DEMANDE DE PAIEMENT")
     date = models.DateTimeField(auto_now_add=True, null=True)
+    qrcode = models.ImageField(null=True, blank=True, default=None)
 
     class Meta:
         db_table = "notification"
+
+
+# ... remove qrcode img on delete ...
+@receiver(post_delete, sender=Notification)
+def submission_delete(sender, instance, **kwargs):
+    instance.qrcode.delete(False)
+
 
 # Dashboard models
 
@@ -554,7 +537,7 @@ need to improve this part ...
 
 
 class TransactionFullSerializer(serializers.ModelSerializer):
-    #agence = AgenceFullSerializer()
+    # agence = AgenceFullSerializer()
     code_transaction = serializers.CharField()
 
     class Meta:

@@ -70,9 +70,9 @@ def payement(client, pre_transactionId):
         commercant.solde += pre_transaction.montant
         commercant.save()
 
-        pre_transaction.status = TransactionModel.COMFIRMED
-        pre_transaction.save()
-
+        #pre_transaction.status = TransactionModel.COMFIRMED
+        # pre_transaction.save()
+        pre_transaction.delete()
         return result
     else:
         return {'msg': "Votre solde est insuffisant pour effectuer cette opération"}

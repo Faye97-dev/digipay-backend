@@ -1,6 +1,6 @@
 from users.models import TransactionModel, Transfert, Transaction, Client_DigiPay, MyUser, Vendor, Client, Pre_Transaction, Notification, Transfert_Direct
 from api.models import Agence
-from api.serializers import TransactionFullSerializer, TransfertFullSerializer
+from api.serializers import TransactionFullSerializer, TransfertFullSerializer, NotificationSerializer
 from users.serializers import TransfertDirectFullSerializer
 import uuid
 
@@ -23,9 +23,11 @@ def code_payement(vendor, montant):
         message="Vous avez générer un paiement de " + str(montant) + " MRU avec le code de confirmation: "+pre_transaction.code_secret)
     msgSelf.save()
 
+    result = NotificationSerializer(msgSelf).data
+
     #vendor.solde -= montant
     # vendor.save()
-    return {'code_confirmation': pre_transaction.code_secret}
+    return {'code_confirmation': pre_transaction.code_secret, 'notification': result}
 
 
 def payement(commercant_client, pre_transactionId):
@@ -66,8 +68,9 @@ def payement(commercant_client, pre_transactionId):
         commercant.solde += pre_transaction.montant
         commercant.save()
 
-        pre_transaction.status = TransactionModel.COMFIRMED
-        pre_transaction.save()
+        #pre_transaction.status = TransactionModel.COMFIRMED
+        # pre_transaction.save()
+        pre_transaction.delete()
 
         return result
     else:
