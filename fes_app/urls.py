@@ -7,7 +7,7 @@ from rest_framework_simplejwt.views import (
 from django.conf import settings
 from django.conf.urls.static import static
 urlpatterns = [
-    path('admin/', admin.site.urls),  # change url of django admin
+    path('dgp-admin/', admin.site.urls),  # change url of django admin
     path('api/user/', include('users.urls')),
     #path('api/register/', include('rest_framework.urls', namespace='rest_framework')),
     path('api/login/', MyTokenObtainPairView.as_view(),

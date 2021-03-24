@@ -10,6 +10,6 @@ urlpatterns = [
     path('client_digiPay/register/', ClientDigiPay_UserCreate.as_view()),
     path('vendor/register/', Vendor_UserCreate.as_view()),
     path('employe/list/', EmployeListAPIViews.as_view()),
-    path('current_user/get/<int:pk>/', currentUserRetriveAPIViews.as_view()),
+    path('auth-user/get/<int:pk>/', currentUserRetriveAPIViews.as_view()),
 
 ]

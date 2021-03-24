@@ -28,20 +28,20 @@ class CommuneAPIViews(generics.ListAPIView):
 
 class AgenceListAPIViews(generics.ListAPIView):
     serializer_class = AgenceFullSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     queryset = Agence.objects.all()
     filterset_class = AgenceFilter
 
 
 class AgenceRetriveAPIViews(generics.RetrieveAPIView):
     serializer_class = AgenceFullSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     queryset = Agence.objects.all()
 
 
 class AgenceUpdateAPIViews(generics.RetrieveUpdateAPIView):
     serializer_class = AgenceSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     queryset = Agence.objects.all()
 
 # clients views
@@ -49,7 +49,7 @@ class AgenceUpdateAPIViews(generics.RetrieveUpdateAPIView):
 
 class ClientViewsets(viewsets.ModelViewSet):
     serializer_class = ClientSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     queryset = Client.objects.all()
 
 # transferts views
@@ -57,32 +57,32 @@ class ClientViewsets(viewsets.ModelViewSet):
 
 class TransfertListAPIViews(generics.ListAPIView):
     serializer_class = TransfertFullSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     queryset = Transfert.objects.all().order_by('-date_creation')
     filterset_class = TransfertFilter
 
 
 class TransfertCreateAPIViews(generics.CreateAPIView):
     serializer_class = TransfertSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     queryset = Transfert.objects.all()
 
 
 class TransfertRetriveAPIViews(generics.RetrieveAPIView):
     serializer_class = TransfertFullSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     queryset = Transfert.objects.all()
 
 
 class TransfertUpdateAPIViews(generics.RetrieveUpdateAPIView):
     serializer_class = TransfertSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     queryset = Transfert.objects.all()
 
 
 class TransfertDeleteAPIViews(generics.DestroyAPIView):
     serializer_class = TransfertSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     queryset = Transfert.objects.all()
 
 # compensation views
@@ -90,33 +90,33 @@ class TransfertDeleteAPIViews(generics.DestroyAPIView):
 
 class CompensationListAPIViews(generics.ListAPIView):
     serializer_class = CompensationFullSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     queryset = Compensation.objects.all()
     filterset_class = CompensationFilter
 
 
 class CompensationCreateAPIViews(generics.CreateAPIView):
     serializer_class = CompensationSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     queryset = Compensation.objects.all()
 
 
 class CompensationRetriveAPIViews(generics.RetrieveAPIView):
     serializer_class = CompensationFullSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     queryset = Compensation.objects.all()
 
 
 class CompensationUpdateAPIViews(generics.RetrieveUpdateAPIView):
     serializer_class = CompensationSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     queryset = Compensation.objects.all()
 
 
 # clotures views
 class ClotureViewsets(viewsets.ModelViewSet):
     serializer_class = ClotureSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     queryset = Cloture.objects.all()
     filterset_class = ClotureFilter
 
@@ -125,14 +125,14 @@ class ClotureViewsets(viewsets.ModelViewSet):
 
 class NotificationListAPIViews(generics.ListAPIView):
     serializer_class = NotificationSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     queryset = Notification.objects.all().order_by('-date')
     filterset_class = NotificationFilter
 
 
 class NotificationUpdateAPIViews(generics.RetrieveUpdateAPIView):
     serializer_class = NotificationSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     queryset = Notification.objects.all().order_by('-date')
 
 # transactions views
@@ -241,7 +241,7 @@ class TransactionListAPIViews(generics.ListAPIView):
 # a corriger ...
 class TransactionRetriveAPIViews(generics.RetrieveAPIView):
     serializer_class = TransactionFullSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     queryset = Transaction.objects
 
     def get(self, request, pk):
@@ -263,7 +263,7 @@ class TransactionRetriveAPIViews(generics.RetrieveAPIView):
 
 class TransactionCreateAPIViews(generics.CreateAPIView):
     serializer_class = TransactionSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     queryset = Transaction.objects.all()
 
 

@@ -7,39 +7,13 @@ from .models import *
 from .serializers import TransfertFullSerializer
 from users.serializers import PreTransactionFullSerializer
 import json
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
+# need to move this method in a file
 
 
-def send_request(url, data, method, headers=None):
-    if method == 'POST':
-        response = requests.post(url, data=data)
-    elif method == 'PUT':
-        response = requests.put(url, data=data)
-    elif method == 'GET':
-        response = requests.get(url)
-    elif method == 'DELETE':
-        response = requests.delete(url)
-        return [{}, response.status_code]
-
-    result = response.json()
-    return [result, response.status_code]
-
-
-@csrf_exempt
-def check_existant_tel(request):
-    if request.method == 'POST':
-        data = json.loads(request.body.decode('utf-8'))
-        try:
-            client = list(Client.objects.filter(tel=data['tel']))
-            result = {'valid_tel': True} if len(client) == 0 else {
-                'valid_tel': False}
-            return JsonResponse(result, safe=False, status=200)
-        except:
-            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
-    else:
-        return HttpResponse(status=405)
-
-
-@csrf_exempt
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
 def check_secret_key(request):
     if request.method == 'POST':
         data = json.loads(request.body.decode('utf-8'))
@@ -63,31 +37,24 @@ def check_secret_key(request):
         return HttpResponse(status=405)
 
 
-@csrf_exempt
-def transactions_a_retirer(request):
-    # sort data by  - date
-    if request.method == 'POST':
-        data = json.loads(request.body.decode('utf-8'))
-        try:
-            agence = Agence.objects.get(id=data['agence_destination'])
+'''
+Methods unused ...
+'''
 
-            retraits = Transfert.objects.filter(agence_destination=agence,
-                                                destinataire__tel=data['tel'], status=Transfert.NOT_WITHDRAWED).order_by('-date_creation')
-            '''
-            retraits = Transfert.objects.filter(
-                destinataire__tel=data['tel'], status=Transfert.NOT_WITHDRAWED).order_by('-date_creation')
-            '''
-            pre_retraits = Pre_Transaction.objects.filter(
-                type_transaction=Pre_Transaction.RETRAIT, status=Pre_Transaction.TO_VALIDATE, destinataire=data['tel']).order_by('-date_creation')
-            #print(retraits, pre_retraits)
 
-            result = TransfertFullSerializer(
-                retraits, many=True).data + PreTransactionFullSerializer(pre_retraits, many=True).data
-            return JsonResponse(result, safe=False, status=200)
-        except:
-            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
-    else:
-        return HttpResponse(status=405)
+def send_request(url, data, method, headers=None):
+    if method == 'POST':
+        response = requests.post(url, data=data)
+    elif method == 'PUT':
+        response = requests.put(url, data=data)
+    elif method == 'GET':
+        response = requests.get(url)
+    elif method == 'DELETE':
+        response = requests.delete(url)
+        return [{}, response.status_code]
+
+    result = response.json()
+    return [result, response.status_code]
 
 
 @csrf_exempt
@@ -97,46 +64,6 @@ def add_transfert_atomic(request):
     data['status'] = 'NOT_WITHDRAWED'
     new_transfert = Transfert.add_transfert(data)
     print(new_transfert)
-
-
-@csrf_exempt
-def client_digiPay_envoie(request):
-    if request.method == 'POST':
-        data = json.loads(request.body.decode('utf-8'))
-        try:
-            if 'client_destinataire' in data.keys():
-                client = Client_DigiPay.objects.get(id=data['client_origine'])
-                result = client.envoyer(
-                    data['client_destinataire'], data['montant'])
-                return JsonResponse(result, safe=False, status=201)
-            elif 'tel' in data.keys():
-                client = Client_DigiPay.objects.get(id=data['client_origine'])
-                result = client.envoyer_par_sms(
-                    data['tel'], data['montant'])
-
-                return JsonResponse(result, safe=False, status=201)
-            else:
-                return JsonResponse({'msg': ' Json data invalid !'}, safe=False, status=400)
-        except:
-            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
-    else:
-        return HttpResponse(status=405)
-
-
-@csrf_exempt
-def client_parSmsRetrait(request):
-    if request.method == 'POST':
-        data = json.loads(request.body.decode('utf-8'))
-        try:
-            pre_transaction = Pre_Transaction.objects.get(
-                id=data['pre_transaction'])
-            result = pre_transaction.client_retrait(
-                data['agence_destination'], data['nom_destinataire'])
-            return JsonResponse(result, safe=False, status=201)
-        except:
-            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
-    else:
-        return HttpResponse(status=405)
 
 
 @csrf_exempt

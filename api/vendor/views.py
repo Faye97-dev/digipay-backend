@@ -5,11 +5,13 @@ from api.models import Agence
 from users.models import Client_DigiPay, Vendor, MyUser, Pre_Transaction, TransactionModel, Transaction, Transfert_Direct
 from users.serializers import PreTransactionFullSerializer, TransfertDirectFullSerializer
 from api.serializers import TransactionFullSerializer
-# from .models import *
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
 import json
 
 
-@csrf_exempt
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
 def random_code_payement(request):
     if request.method == 'POST':
         data = json.loads(request.body.decode('utf-8'))
@@ -23,7 +25,8 @@ def random_code_payement(request):
         return HttpResponse(status=405)
 
 
-@csrf_exempt
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
 def check_codePayement_vendor(request):
     if request.method == 'POST':
         data = json.loads(request.body.decode('utf-8'))
@@ -45,7 +48,8 @@ def check_codePayement_vendor(request):
         return HttpResponse(status=405)
 
 
-@csrf_exempt
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
 def vendor_payement(request):
     if request.method == 'POST':
         data = json.loads(request.body.decode('utf-8'))
@@ -59,7 +63,8 @@ def vendor_payement(request):
         return HttpResponse(status=405)
 
 
-@csrf_exempt
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
 def check_codeTransaction(request):
     if request.method == 'POST':
         data = json.loads(request.body.decode('utf-8'))
@@ -67,13 +72,15 @@ def check_codeTransaction(request):
             vendor = MyUser.objects.get(id=data['vendor'])
             transaction = list(Transaction.objects.filter(
                 type_transaction=Transaction.PAIEMENT, transaction__status=TransactionModel.COMFIRMED))
+
+            # valider le num de la transaction et l'auteur de la transaction
             transaction = [
                 item for item in transaction if item.code_transaction == data['numero_transaction'] and
                 Transfert_Direct.objects.get(id=item.transaction.id).destinataire == vendor]
-            transaction
+            # transaction
             if len(transaction) == 0:
                 # todo handle msg by case
-                return JsonResponse({'msg': "Ce code de transaction n'est pas associer a un paiement ou inexistant !"}, safe=False, status=200)
+                return JsonResponse({'msg': "Ce code de transaction n'est pas associé a un paiement ou vous êtes pas l'auteur de la transaction !"}, safe=False, status=200)
             else:
                 transaction = transaction[0]
 
@@ -89,7 +96,8 @@ def check_codeTransaction(request):
         return HttpResponse(status=405)
 
 
-@csrf_exempt
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
 def vendor_payback(request):
     if request.method == 'POST':
         data = json.loads(request.body.decode('utf-8'))

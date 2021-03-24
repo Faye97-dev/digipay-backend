@@ -2,13 +2,16 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from .models import HOST
 from django.http import JsonResponse, HttpResponse
 from users.models import Transfert, Transaction, Client_DigiPay, Pre_Transaction
-#from .models import *
-#from .serializers import TransfertFullSerializer
 from users.serializers import ClientDigiPay_UserSerializer
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
 import json
 
+# need to move this method in a file
 
-@csrf_exempt
+
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
 def check_clientDigiPay(request):
     if request.method == 'POST':
         data = json.loads(request.body.decode('utf-8'))
@@ -21,7 +24,7 @@ def check_clientDigiPay(request):
                 result = {'client': data['tel'], 'check': False, 'montant': data['montant'], 'soldeEnough': soldeEnough} if len(
                     client) == 0 else {'client': ClientDigiPay_UserSerializer(client[0]).data, 'check': True,
                                        'montant': data['montant'], 'soldeEnough': soldeEnough}
-                print(sender.tel, data['tel'])
+                #print(sender.tel, data['tel'])
             else:
                 result = {
                     'msg': 'le numero de telephone du client est similaire au numero du compte utilisateur !'}

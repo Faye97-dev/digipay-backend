@@ -1,8 +1,8 @@
 from django.urls import path
 from rest_framework import routers
 from .views import *
-from .actions import *
-from .service import *
+from .actions import check_secret_key
+from .service import check_clientDigiPay
 from .agence.views import *
 from .client.views import *
 from .vendor.views import *
@@ -35,44 +35,45 @@ urlpatterns = [
     path('transaction/get/<int:pk>/', TransactionRetriveAPIViews.as_view()),
     path('transaction/create/', TransactionCreateAPIViews.as_view()),
 
-
-    ###
-    path('func/transaction/retrait_list/', transactions_a_retirer),
-    path('func/transaction/secret_key_check/', check_secret_key),
     ###
     #path('func/transfert/add/', add_transfert),
     #path('func/transfert/error/', error_transfert),
     #path('func/retrait/add/', add_retrait),
-    path('func/client/check_existant_tel/', check_existant_tel),
 
+    # agence
+    path('func/transaction/retrait-list/', transactions_a_retirer),
+    path('func/transaction/valid-secret-key/', check_secret_key),
+    path('func/client/valid-client-tel/', check_existant_tel),
+    # retrait dans une agence par un anonyme
+    path('func/client/retrait-by-sms/', client_parSmsRetrait),
 
     path('func/transfert/add/', agence_transfert),
     path('func/retrait/add/', agence_retrait),
-    path('func/client_digiPay_vendor/check/', check_byRole_ClientVendor),
     path('func/recharge/add/', agence_recharge),
-    path('func/client_digiPay_vendor/retrait/',
+    path('func/clientdigiPay-and-vendor/check/', check_byRole_ClientVendor),
+    path('func/clientdigiPay-and-vendor/retrait/',
          agence_retrait_par_codeConfirmation),
 
-    ##
+    # Digipay client
     path('func/client_digiPay/check/', check_clientDigiPay),
     path('func/client_digiPay/envoie/', client_digiPay_envoie),
-    # client_digipay and vendor
+    # retrait client_digipay and vendor
     path('func/client_digiPay/retrait/', random_code_retrait),
-    path('func/client_digiPay/check_codePayement/', check_codePayement),
+    path('func/client_digiPay/valid-code-payement/', check_codePayement),
+    #path('func/client_digiPay/valid-code-payement/', hello_world),
+
     path('func/client_digiPay/payement/', client_payement),
-    path('func/client_digiPay/achat_credit/', client_achat_credit),
+    path('func/client_digiPay/achat-credit/', client_achat_credit),
 
-    # retrait dans une agence par un anonyme
-    path('func/client/retrait_par_sms/', client_parSmsRetrait),
 
-    ##
-    path('func/vendor/gen_codePayement/', random_code_payement),
-    path('func/vendor/check_codePayement/', check_codePayement_vendor),
+    # Digipay vendor
+    path('func/vendor/gen-code-payement/', random_code_payement),
+    path('func/vendor/valid-code-payement/', check_codePayement_vendor),
     path('func/vendor/payement/', vendor_payement),
     path('func/vendor/payback/', vendor_payback),
-    path('func/vendor/check_codeTransaction/', check_codeTransaction),
+    path('func/vendor/valid-code-transaction/', check_codeTransaction),
     ###
-    path('', home),
+    #path('', home),
 ]
 
 urlpatterns += router.urls

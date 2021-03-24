@@ -95,7 +95,7 @@ class EmployeFilter(filters.FilterSet):
 
 class EmployeListAPIViews(generics.ListAPIView):
     serializer_class = Employe_UserSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     queryset = Employee.objects.all()
     filterset_class = EmployeFilter
 
