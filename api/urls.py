@@ -2,10 +2,11 @@ from django.urls import path
 from rest_framework import routers
 from .views import *
 from .actions import check_secret_key
-from .service import check_clientDigiPay
+from .service import check_clientDigiPay, profile_statistiques
 from .agence.views import *
 from .client.views import *
 from .vendor.views import *
+from .agent.views import *
 router = routers.DefaultRouter()
 router.register('client', ClientViewsets)
 router.register('cloture', ClotureViewsets)
@@ -26,7 +27,8 @@ urlpatterns = [
     path('transfert/get/<int:pk>/', TransfertRetriveAPIViews.as_view()),
     path('transfert/delete/<int:pk>/', TransfertDeleteAPIViews.as_view()),
 
-    path('compensation/list/', CompensationListAPIViews.as_view()),
+    #path('compensation/list/', CompensationListAPIViews.as_view()),
+    path('compensation/list/', TransactionCompensationListAPIViews.as_view()),
     path('compensation/create/', CompensationCreateAPIViews.as_view()),
     path('compensation/update/<int:pk>/', CompensationUpdateAPIViews.as_view()),
     path('compensation/get/<int:pk>/', CompensationRetriveAPIViews.as_view()),
@@ -43,6 +45,7 @@ urlpatterns = [
     # agence
     path('func/transaction/retrait-list/', transactions_a_retirer),
     path('func/transaction/valid-secret-key/', check_secret_key),
+    path('func/transaction/valid-compensation/', valid_compensation),
     path('func/client/valid-client-tel/', check_existant_tel),
     # retrait dans une agence par un anonyme
     path('func/client/retrait-by-sms/', client_parSmsRetrait),
@@ -73,7 +76,13 @@ urlpatterns = [
     path('func/vendor/payback/', vendor_payback),
     path('func/vendor/valid-code-transaction/', check_codeTransaction),
     ###
+
+    # agence compensation
+    path('func/agent/pre-compensation/', demande_compensation),
     #path('', home),
+
+    # statistiques
+    path('func/profil/statistique/<int:pk>/', profile_statistiques),
 ]
 
 urlpatterns += router.urls

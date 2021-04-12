@@ -14,9 +14,10 @@ class Agent_UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Agent
-        fields = ('username', 'first_name', 'last_name',
-                  'role', 'password', 'tel', 'email', 'adresse')
-        extra_kwargs = {'password': {'write_only': True}}
+        fields = ('id', 'username', 'first_name', 'last_name',
+                  'role', 'password', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login')
+        extra_kwargs = {'password': {'write_only': True},
+                        'id': {'read_only': True}, 'start_date': {'read_only': True}, 'last_login': {'read_only': True}}
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)
@@ -29,6 +30,11 @@ class Agent_UserSerializer(serializers.ModelSerializer):
 
         return instance
 
+class Agent_ProfilSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Agent
+        fields = ('id', 'username', 'first_name', 'role',
+                  'last_name', 'tel', 'email', 'adresse')
 
 class Employe_UserSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(required=True)
@@ -65,6 +71,13 @@ class EmployeFullSerializer(serializers.ModelSerializer):
                         'id': {'read_only': True}, 'start_date': {'read_only': True}, 'last_login': {'read_only': True}}
 
 
+class Employe_ProfilSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Employee
+        fields = ('id', 'username', 'first_name', 'role',
+                  'last_name', 'tel', 'email', 'adresse')
+
+
 class Responsable_UserSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(required=True)
     last_name = serializers.CharField(required=True)
@@ -91,6 +104,11 @@ class Responsable_UserSerializer(serializers.ModelSerializer):
 
         return instance
 
+class Responsable_ProfilSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Responsable
+        fields = ('id', 'username', 'first_name', 'role',
+                  'last_name', 'tel', 'email', 'adresse')
 
 class ClientDigiPay_UserSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(required=True)
@@ -122,6 +140,13 @@ class ClientDigiPay_UserSerializer(serializers.ModelSerializer):
         return instance
 
 
+class CLientDigipay_ProfilSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Client_DigiPay
+        fields = ('id', 'username', 'first_name', 'role',
+                  'last_name', 'tel', 'email', 'adresse')
+
+
 class Vendor_UserSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(required=True)
     tel = serializers.CharField(required=True)
@@ -148,10 +173,17 @@ class Vendor_UserSerializer(serializers.ModelSerializer):
         instance.client = client.id
         instance.save()
         return instance
-# login
+
+
+class Vendor_ProfilSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Vendor
+        fields = ('id', 'username', 'first_name', 'role',
+                  'last_name', 'tel', 'email', 'adresse')
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    # login
     #name = serializers.CharField(required=False)
 
     def validate(self, attrs):

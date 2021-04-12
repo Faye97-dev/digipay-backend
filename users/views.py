@@ -31,6 +31,12 @@ class Agent_UserCreate(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class AgentUpdateAPIViews(generics.RetrieveUpdateAPIView):
+    serializer_class = Agent_ProfilSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = Agent.objects.all()
+
+
 class Employe_UserCreate(APIView):
     permission_classes = [AllowAny]
 
@@ -43,6 +49,12 @@ class Employe_UserCreate(APIView):
                 json = serializer.data
                 return Response(json, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class EmployeUpdateAPIViews(generics.RetrieveUpdateAPIView):
+    serializer_class = Employe_ProfilSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = Employee.objects.all()
 
 
 class Responsable_UserCreate(APIView):
@@ -59,6 +71,12 @@ class Responsable_UserCreate(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class ResponsableUpdateAPIViews(generics.RetrieveUpdateAPIView):
+    serializer_class = Responsable_ProfilSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = Responsable.objects.all()
+
+
 class ClientDigiPay_UserCreate(APIView):
     permission_classes = [AllowAny]
 
@@ -73,6 +91,12 @@ class ClientDigiPay_UserCreate(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class ClientDigiPayUpdateAPIViews(generics.RetrieveUpdateAPIView):
+    serializer_class = CLientDigipay_ProfilSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = Client_DigiPay.objects.all()
+
+
 class Vendor_UserCreate(APIView):
     permission_classes = [AllowAny]
 
@@ -85,6 +109,12 @@ class Vendor_UserCreate(APIView):
                 json = serializer.data
                 return Response(json, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class VendorUpdateAPIViews(generics.RetrieveUpdateAPIView):
+    serializer_class = Vendor_ProfilSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = Vendor.objects.all()
 
 
 class EmployeFilter(filters.FilterSet):
@@ -123,6 +153,10 @@ class currentUserRetriveAPIViews(generics.RetrieveAPIView):
         elif self.request.user.role == MyUser.CLIENT:
             self.serializer_class = ClientDigiPay_UserSerializer
             return Client_DigiPay.objects.get(pk=self.request.user.id)
+
+        elif self.request.user.role == MyUser.AGENT_COMPENSATION:
+            self.serializer_class = Agent_UserSerializer
+            return Agent.objects.get(pk=self.request.user.id)
 
         return {}
 

@@ -1,4 +1,4 @@
-from users.models import TransactionModel, Transfert, Transaction, Client_DigiPay, MyUser, Vendor, Client, Pre_Transaction
+from users.models import TransactionModel, Transfert, Transaction, Client_DigiPay, MyUser, Vendor, Client, Pre_Transaction, Compensation, Notification
 from api.models import Agence
 from api.serializers import TransactionFullSerializer, TransfertFullSerializer
 
@@ -166,3 +166,42 @@ def retrait_par_code(agence, pre_transactionId):
         return result
     else:
         return {'msg': "le solde l'agence est insuffisant pour effectuer cette opération"}
+
+
+def confirmer_compensation(agence, transactionID, notifID):
+    compensation = Compensation.objects.get(id=transactionID)
+    transaction = Transaction.objects.get(transaction=compensation)
+    notification = Notification.objects.get(id=notifID)
+
+    if transaction.type_transaction == Transaction.COMP_VERSEMENT:
+        compensation.status = Compensation.COMFIRMED
+        compensation.save()
+
+        agence.solde += compensation.montant
+        agence.save()
+
+        notification.delete()
+        return {'result': 'Compensation validée avec succes !'}
+    elif transaction.type_transaction == Transaction.COMP_RETRAIT:
+        if agence.solde >= compensation.montant:
+            compensation.status = Compensation.COMFIRMED
+            compensation.save()
+
+            agence.solde -= compensation.montant
+            agence.save()
+
+            notification.delete()
+            return {'result': 'Compensation validée avec succes !'}
+        else:
+            return {'msg': "le solde de l'agence est insuffisant pour effectuer cette opération"}
+
+
+def annuler_compensation(agence, transactionID, notifID):
+    ###
+    compensation = Compensation.objects.get(id=transactionID)
+    compensation.status = Compensation.CANCELED
+    compensation.save()
+    ##
+    notification = Notification.objects.get(id=notifID)
+    notification.delete()
+    return {'result': 'Compensation annulée avec succes !'}

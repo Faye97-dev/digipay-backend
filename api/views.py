@@ -11,10 +11,12 @@ from users.serializers import CompensationFullSerializer, TransfertDirectFullSer
 from users.models import Transfert
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import *
-from users.models import MyUser, Responsable, Employee, Client_DigiPay, Vendor, Transfert_Direct, Notification
+from users.models import MyUser, Responsable, Employee, Client_DigiPay, Vendor, Transfert_Direct, Notification, Agent
 from .filters import *
-import json
 from django.forms.models import model_to_dict
+from .service import transactionListByUser, compensationsListByUser
+import json
+
 # Create your views here.
 
 
@@ -129,6 +131,22 @@ class NotificationListAPIViews(generics.ListAPIView):
     queryset = Notification.objects.all().order_by('-date')
     filterset_class = NotificationFilter
 
+    def list(self, request):
+        serializer = self.serializer_class(
+            self.filter_queryset(self.get_queryset()), many=True)
+
+        data = []
+        for d in serializer.data:
+            if d['status'] in [Notification.DEMANDE_COMPENSATION, Notification.COMPENSATION]:
+                compensation = Compensation.objects.get(
+                    id=d['transaction'])
+                d['transaction'] = CompensationFullSerializer(
+                    compensation).data
+                data.append(d)
+            else:
+                data.append(d)
+        return Response(data)
+
 
 class NotificationUpdateAPIViews(generics.RetrieveUpdateAPIView):
     serializer_class = NotificationSerializer
@@ -145,68 +163,7 @@ class TransactionListAPIViews(generics.ListAPIView):
     filterset_class = TransactionFilter
 
     def get_queryset(self):
-        user = {}
-        if self.request.user.role == MyUser.RESPONSABLE_AGENCE:
-            user = Responsable.objects.get(id=self.request.user.id)
-        elif self.request.user.role == MyUser.EMPLOYE_AGENCE:
-            user = Employee.objects.get(id=self.request.user.id)
-
-        if self.request.user.role == MyUser.RESPONSABLE_AGENCE or self.request.user.role == MyUser.EMPLOYE_AGENCE:
-            transferts = [item.id for item in list(
-                Transfert.objects.filter(agence_origine=user.agence))]
-            ###
-            retraits = [item.id for item in list(
-                Transfert.objects.filter(agence_destination=user.agence))]
-            ###
-            res = Transaction.objects.filter(
-                transaction__id__in=list(set(transferts+retraits))).order_by('-date')
-            return res
-        elif self.request.user.role == MyUser.CLIENT:
-            # handle some cases .... when expediteur is a digiPay client can do a transfert and retrait ??
-            user = Client_DigiPay.objects.get(id=self.request.user.id)
-            client_fictif = Client.objects.get(id=user.client)
-            ###
-            retraits_agence = Transfert.objects.filter(expediteur=user.client)
-            retraits_agence = [item.id for item in list(
-                retraits_agence) if item.agence_destination == item.agence_origine]  # type_transaction est RETRAIT par sms
-
-            recharges_agence = Transfert.objects.filter(
-                destinataire=client_fictif)
-            recharges_agence = [item.id for item in list(
-                recharges_agence) if item.agence_destination == item.agence_origine]
-
-            # retraits_agence = [item.id for item in list(
-            # Transfert.objects.filter(expediteur=user.client))]
-            # transfert_agence = [item.id for item in list(
-            #    Transfert.objects.filter(destinataire__id=user.client))]
-            ###
-            transferts = [item.id for item in list(Transfert_Direct.objects.filter(
-                expediteur=user))]
-            retraits = [item.id for item in list(Transfert_Direct.objects.filter(
-                destinataire=user))]
-            print(retraits_agence, recharges_agence, transferts, retraits)
-            res = Transaction.objects.filter(
-                transaction__id__in=list(set(retraits_agence+recharges_agence+transferts+retraits))).order_by('-date')
-            return res
-        elif self.request.user.role == MyUser.VENDOR:
-            user = Vendor.objects.get(id=self.request.user.id)
-            client_fictif = Client.objects.get(id=user.client)
-
-            recharges_agence = Transfert.objects.filter(
-                destinataire=client_fictif)
-            recharges_agence = [item.id for item in list(
-                recharges_agence) if item.agence_destination == item.agence_origine]
-
-            transferts = [item.id for item in list(Transfert_Direct.objects.filter(
-                expediteur=user))]
-            retraits = [item.id for item in list(Transfert_Direct.objects.filter(
-                destinataire=user))]
-
-            res = Transaction.objects.filter(
-                transaction__id__in=list(set(recharges_agence+transferts+retraits))).order_by('-date')
-            return res
-        else:
-            return []
+        return transactionListByUser(self.request.user)
 
     def list(self, request):
         serializer = self.serializer_class(
@@ -214,13 +171,10 @@ class TransactionListAPIViews(generics.ListAPIView):
 
         data = []
         for d in serializer.data:
-            # if d['type_transaction'] == Transaction.RETRAIT or d['type_transaction'] == Transaction.SUP_3000 or d['type_transaction'] == Transaction.INF_3000:
-            # if 'categorie_transaction' in list(d.keys()):
             if d['type_transaction'] in [Transaction.TRANSFERT, Transaction.RETRAIT, Transaction.RECHARGE]:
                 transfert = Transfert.objects.get(id=d['transaction'])
                 d['transaction'] = TransfertFullSerializer(transfert).data
                 data.append(d)
-            # elif 'type_transaction' in list(d.keys()):
             elif d['type_transaction'] in [Transaction.COMP_RETRAIT, Transaction.COMP_VERSEMENT]:
                 compensation = Compensation.objects.get(
                     id=d['transaction'])
@@ -238,8 +192,33 @@ class TransactionListAPIViews(generics.ListAPIView):
         return Response(data)
 
 
-# a corriger ...
+class TransactionCompensationListAPIViews(generics.ListAPIView):
+    serializer_class = TransactionFullSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_class = TransactionFilter
+
+    def get_queryset(self):
+        return compensationsListByUser(self.request.user)
+
+    def list(self, request):
+        serializer = self.serializer_class(
+            self.filter_queryset(self.get_queryset()), many=True)
+
+        data = []
+        for d in serializer.data:
+            if d['type_transaction'] in [Transaction.COMP_RETRAIT, Transaction.COMP_VERSEMENT]:
+                compensation = Compensation.objects.get(
+                    id=d['transaction'])
+                d['transaction'] = CompensationFullSerializer(
+                    compensation).data
+                data.append(d)
+            else:
+                data.append(d)
+        return Response(data)
+
+
 class TransactionRetriveAPIViews(generics.RetrieveAPIView):
+    # a corriger bugs existant...
     serializer_class = TransactionFullSerializer
     permission_classes = [IsAuthenticated]
     queryset = Transaction.objects

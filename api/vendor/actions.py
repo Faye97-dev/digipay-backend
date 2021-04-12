@@ -82,20 +82,20 @@ def remboursement(vendor, transactionId):
     prev_transfert = Transfert_Direct.objects.get(
         id=prev_transaction.transaction.id)
     ###
-    client = list(Client_DigiPay.objects.filter(
+    list_client = list(Client_DigiPay.objects.filter(
         id=prev_transfert.expediteur.id))
     list_vendor = list(Vendor.objects.filter(id=prev_transfert.expediteur.id))
-    if len(client) != 0:
-        sender = client[0]
+    if len(list_client) != 0:
+        receiver = list_client[0]
     elif len(list_vendor) != 0:
-        sender = list_vendor[0]
+        receiver = list_vendor[0]
     else:
         return {'msg': "Type d'utilisateur invalid !"}
 
-    if sender.solde >= prev_transfert.montant:
+    if vendor.solde >= prev_transfert.montant:
         transfert = Transfert_Direct(
             expediteur=vendor,
-            destinataire=sender,
+            destinataire=receiver,
             status=TransactionModel.COMFIRMED,
             montant=prev_transfert.montant)
         transfert.save()
@@ -111,8 +111,8 @@ def remboursement(vendor, transactionId):
         vendor.solde -= transfert.montant
         vendor.save()
 
-        sender.solde += transfert.montant
-        sender.save()
+        receiver.solde += transfert.montant
+        receiver.save()
 
         prev_transfert.status = TransactionModel.CANCELED
         prev_transfert.save()

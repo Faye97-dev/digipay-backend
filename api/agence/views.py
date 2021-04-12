@@ -1,6 +1,6 @@
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.http import JsonResponse, HttpResponse
-from .actions import transfert, retrait, recharge, retrait_par_code
+from .actions import transfert, retrait, recharge, retrait_par_code, confirmer_compensation, annuler_compensation
 from api.models import Agence
 from users.models import Client_DigiPay, Vendor, Transfert, Transaction, Pre_Transaction, Transfert_Direct, Client
 from users.serializers import ClientDigiPay_UserSerializer, Vendor_UserSerializer
@@ -137,10 +137,30 @@ def check_existant_tel(request):
     if request.method == 'POST':
         data = json.loads(request.body.decode('utf-8'))
         try:
-            client = list(Client.objects.filter(tel=data['tel']))
+            client = list(Client.objects.filter(tel=str(data['tel'])))
             result = {'valid_tel': True} if len(client) == 0 else {
                 'valid_tel': False}
             return JsonResponse(result, safe=False, status=200)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)
+
+
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
+def valid_compensation(request):
+    if request.method == 'POST':
+        data = json.loads(request.body.decode('utf-8'))
+        try:
+            agence = Agence.objects.get(id=data['agence'])
+            if data['confirm']:
+                result = confirmer_compensation(
+                    agence, data['transaction'], data['notif'])
+            if data['confirm'] == False:
+                result = annuler_compensation(
+                    agence, data['transaction'], data['notif'])
+            return JsonResponse(result, safe=False, status=201)
         except:
             return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
     else:
