@@ -5,10 +5,21 @@ from api.serializers import TransactionFullSerializer, TransfertFullSerializer
 
 def transfert(agence_origine, data):
     agence_destination = Agence.objects.get(id=data['agence_destination'])
-    # if agence_origine.solde >= data['montant']:
-    expediteur = data['expediteur'] if 'expediteur' in list(
-        data.keys()) else None
-    destinataire = Client.objects.get(id=data['destinataire'])
+
+    if data['destinataireInfo']['digipay']:
+        return {'msg': "L'envoie vers un compte un digipay n'est pas disponible pour le moment ..."}
+    destinataire = Client.objects.get(id=data['destinataireInfo']['id'])
+
+    expediteur = None
+    if data['expediteurInfo']:
+        # if data['expediteurInfo']['digipay']:
+        #    return {'msg': "Nous vous conseillons d'utiliser l'application mobile digiPay !"}
+        # else:
+        if data['expediteurInfo']['id'] == data['destinataireInfo']['id']:
+            return {'msg': "L'expéditeur doit être différent du destinataire !"}
+
+        expediteur = data['expediteurInfo']['id']
+
     transfert = Transfert(agence_origine=agence_origine,
                           agence_destination=agence_destination,
                           destinataire=destinataire,
@@ -78,8 +89,6 @@ def recharge(agence, receiver, montant):
     else:
         return {'msg': "L'utilisateur de ce compte est inexistant"}
 
-    # agence.dette = (montant - self.frais_recharge) la dette de l'agence
-    # agence.save()
     categorie = Transfert.SUP_3000 if montant > 3000 else Transfert.INF_3000
     client_fictif = Client.objects.get(id=destinataire.client)
     transfert = Transfert(agence_origine=agence,
@@ -98,6 +107,9 @@ def recharge(agence, receiver, montant):
 
     destinataire.solde += montant
     destinataire.save()
+
+    agence.solde += transfert.montant
+    agence.save()
 
     result = TransactionFullSerializer(transaction).data
     result['transaction'] = TransfertFullSerializer(transfert).data

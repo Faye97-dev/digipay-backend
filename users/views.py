@@ -161,6 +161,42 @@ class currentUserRetriveAPIViews(generics.RetrieveAPIView):
         return {}
 
 
+class UpdatePasswordView(generics.UpdateAPIView):
+    """
+    An endpoint for changing password.
+    """
+    serializer_class = ChangePasswordSerializer
+    model = MyUser
+    permission_classes = (IsAuthenticated,)
+
+    def get_object(self, queryset=None):
+        obj = self.request.user
+        return obj
+
+    def update(self, request, *args, **kwargs):
+        #self.object = self.get_object()
+        self.object = MyUser.objects.get(pk=kwargs['pk'])
+        serializer = self.get_serializer(data=request.data)
+
+        #print("----", request, args, kwargs)
+
+        if serializer.is_valid():
+            # Check old password
+            if not self.object.check_password(serializer.data.get("old_password")):
+                # return Response({"old_password": ["Wrong password."]}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"msg": "Mot de passe actuel incorrect."}, status=status.HTTP_400_BAD_REQUEST)
+            # set_password also hashes the password that the user will get
+            self.object.set_password(serializer.data.get("new_password"))
+            self.object.save()
+            response = {
+                'status': 'success',
+                'code': status.HTTP_200_OK,
+                # 'message': 'Password updated successfully',
+                'msg': 'Mot de passe modifié avec success !'
+            }
+
+            return Response(response)
+
 # logout
 
 

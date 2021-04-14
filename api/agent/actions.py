@@ -23,7 +23,7 @@ def pre_compensation(agent, data):
     if len(responsable) != 0:
         responsable = responsable[0]
     else:
-        return {'msg': "Aucun responsable d'agence n'est associe a cette agence !"}
+        return {'msg': "Aucun responsable d'agence n'est associé a cette agence !"}
     ##
     compensation = Compensation(agence=agence,
                                 agent=agent,

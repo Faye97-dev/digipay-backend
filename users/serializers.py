@@ -30,11 +30,13 @@ class Agent_UserSerializer(serializers.ModelSerializer):
 
         return instance
 
+
 class Agent_ProfilSerializer(serializers.ModelSerializer):
     class Meta:
         model = Agent
         fields = ('id', 'username', 'first_name', 'role',
                   'last_name', 'tel', 'email', 'adresse')
+
 
 class Employe_UserSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(required=True)
@@ -104,11 +106,13 @@ class Responsable_UserSerializer(serializers.ModelSerializer):
 
         return instance
 
+
 class Responsable_ProfilSerializer(serializers.ModelSerializer):
     class Meta:
         model = Responsable
         fields = ('id', 'username', 'first_name', 'role',
                   'last_name', 'tel', 'email', 'adresse')
+
 
 class ClientDigiPay_UserSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(required=True)
@@ -249,7 +253,18 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         return data
 
 
+class ChangePasswordSerializer(serializers.Serializer):
+    # update password user
+    model = MyUser
+    """
+    Serializer for password change endpoint.
+    """
+    old_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True)
+
 # compensation serializer ...
+
+
 class CompensationFullSerializer(serializers.ModelSerializer):
     agence = AgenceFullSerializer()
     agent = Agent_UserSerializer()

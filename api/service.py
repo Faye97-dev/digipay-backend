@@ -18,17 +18,34 @@ def check_clientDigiPay(request):
         data = json.loads(request.body.decode('utf-8'))
         try:
             sender = Client_DigiPay.objects.get(id=data['sender'])
-            soldeEnough = True if sender.solde > data['montant'] else False
-            ##
-            if str(sender.tel) != str(data['tel']):
-                client = list(Client_DigiPay.objects.filter(tel=data['tel']))
-                result = {'client': data['tel'], 'check': False, 'montant': data['montant'], 'soldeEnough': soldeEnough} if len(
-                    client) == 0 else {'client': ClientDigiPay_UserSerializer(client[0]).data, 'check': True,
-                                       'montant': data['montant'], 'soldeEnough': soldeEnough}
-                # print(sender.tel, data['tel'])
-            else:
+            if str(sender.tel) == str(data['tel']):
                 result = {
-                    'msg': 'le numero de telephone du client est similaire au numero du compte utilisateur !'}
+                    'msg': 'le numéro de téléphone du client est similaire au numéro du compte utilisateur !'}
+                return JsonResponse(result, safe=False, status=200)
+
+            soldeEnough = True if sender.solde > data['montant'] else False
+            if not soldeEnough:
+                result = {
+                    'msg': 'Votre solde est insuffisant pour effectuer cette opération !'}
+                return JsonResponse(result, safe=False, status=200)
+
+            vendor = list(Vendor.objects.filter(tel=data['tel']))
+            employe = list(Employee.objects.filter(tel=data['tel']))
+            responsable = list(Responsable.objects.filter(tel=data['tel']))
+            agent = list(Agent.objects.filter(tel=data['tel']))
+
+            if len(vendor) != 0 or len(employe) != 0 or len(responsable) != 0 or len(agent) != 0:
+                result = {'msg': "Ce numéro de téléphone n'est pas autorisé !"}
+                return JsonResponse(result, safe=False, status=200)
+
+            client = list(Client_DigiPay.objects.filter(tel=data['tel']))
+            if len(client) == 0:
+                result = {'client': data['tel'],
+                          'check': False, 'montant': data['montant']}
+            else:
+                result = {'client': ClientDigiPay_UserSerializer(
+                    client[0]).data, 'check': True, 'montant': data['montant']}
+
             return JsonResponse(result, safe=False, status=200)
         except:
             return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
@@ -240,7 +257,7 @@ def profile_statistiques(request, pk):
         # print(payements_faits, remboursements_recus, envoies_recus,
         #      envoies_faits, recharges, mes_retraits, retraits_par_sms)
 
-        result = {'payements_faits': payements_faits, 'remboursements_recus': remboursements_recus,
+        result = {'payements': payements_faits, 'remboursements': remboursements_recus,
                   'envoies_recus': envoies_recus, 'envoies_faits': envoies_faits,
                   'recharges': recharges, 'retraits': mes_retraits, 'retraits_par_sms': retraits_par_sms}
 

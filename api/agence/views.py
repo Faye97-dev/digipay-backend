@@ -4,7 +4,7 @@ from .actions import transfert, retrait, recharge, retrait_par_code, confirmer_c
 from api.models import Agence
 from users.models import Client_DigiPay, Vendor, Transfert, Transaction, Pre_Transaction, Transfert_Direct, Client
 from users.serializers import ClientDigiPay_UserSerializer, Vendor_UserSerializer
-from api.serializers import TransfertFullSerializer
+from api.serializers import TransfertFullSerializer, ClientSerializer
 from users.serializers import PreTransactionFullSerializer
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -17,7 +17,7 @@ import json
 def agence_transfert(request):
     if request.method == 'POST':
         data = json.loads(request.body.decode('utf-8'))
-        print(data)
+        # print(data)
         try:
             agence_origine = Agence.objects.get(id=data['agence_origine'])
             result = transfert(agence_origine, data)
@@ -161,6 +161,37 @@ def valid_compensation(request):
                 result = annuler_compensation(
                     agence, data['transaction'], data['notif'])
             return JsonResponse(result, safe=False, status=201)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)
+
+
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
+def check_client_anonyme(request):
+    if request.method == 'POST':
+        data = json.loads(request.body.decode('utf-8'))
+        try:
+            client_anonyme = Client.objects.filter(tel=data['tel'])
+            if len(client_anonyme) == 0:
+                return JsonResponse({'msg': "Pas de compte client associé à ce numéro de téléphone !"}, safe=False, status=201)
+            else:
+                clients_vendor = [
+                    item.client for item in Vendor.objects.all()]
+                if client_anonyme[0].id in clients_vendor:
+                    return JsonResponse({'msg': "numéro de téléphone non autorisé !"}, safe=False, status=201)
+                else:
+                    clients_digipay = [
+                        item.client for item in Client_DigiPay.objects.all()]
+                    if client_anonyme[0].id in clients_digipay:
+                        result = ClientSerializer(client_anonyme[0]).data
+                        result['digipay'] = True
+                        return JsonResponse(result, safe=False, status=201)
+                    else:
+                        result = ClientSerializer(client_anonyme[0]).data
+                        result['digipay'] = False
+                        return JsonResponse(result, safe=False, status=201)
         except:
             return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
     else:

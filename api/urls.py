@@ -49,6 +49,8 @@ urlpatterns = [
     path('func/client/valid-client-tel/', check_existant_tel),
     # retrait dans une agence par un anonyme
     path('func/client/retrait-by-sms/', client_parSmsRetrait),
+    path('func/client/check/', check_client_anonyme),
+
 
     path('func/transfert/add/', agence_transfert),
     path('func/retrait/add/', agence_retrait),

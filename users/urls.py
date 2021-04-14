@@ -28,5 +28,7 @@ urlpatterns = [
 
 
     path('auth-user/get/<int:pk>/', currentUserRetriveAPIViews.as_view()),
+    path('password/update/<int:pk>/', UpdatePasswordView.as_view()),
+
 
 ]
