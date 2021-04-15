@@ -248,11 +248,19 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             data['start_date'] = data['start_date'].strftime(
                 "%d-%m-%Y %H:%M:%S") if data['start_date'] else data['start_date']
 
-        elif self.user.role == MyUser.AGENT_COMPENSATION or self.user.role == MyUser.SYSADMIN:
-            # some update move condition on sysadmin
+        elif self.user.role == MyUser.AGENT_COMPENSATION:
             agent = Agent.objects.get(id=self.user.id)
             data.update(model_to_dict(agent, fields=['id', 'username', 'first_name', 'last_name',
                                                      'role', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
+            data['last_login'] = data['last_login'].strftime(
+                "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
+            data['start_date'] = data['start_date'].strftime(
+                "%d-%m-%Y %H:%M:%S") if data['start_date'] else data['start_date']
+
+        elif self.user.role == MyUser.SYSADMIN:
+            sysadmin = SysAdmin.objects.get(id=self.user.id)
+            data.update(model_to_dict(sysadmin, fields=['id', 'username', 'first_name', 'last_name',
+                                                        'role', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
             data['last_login'] = data['last_login'].strftime(
                 "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
             data['start_date'] = data['start_date'].strftime(
@@ -368,3 +376,4 @@ class PreTransactionFullSerializer(serializers.ModelSerializer):
 
 
 # todo List , Update , Get , change pwsd :  ( create : responsable ) , employee , agent
+
