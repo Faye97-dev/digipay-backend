@@ -45,6 +45,7 @@ class MyUser(AbstractBaseUser, PermissionsMixin):
 
     # SUPER_ADMIN = 'SUPER_ADMIN'
     # SUPERVISEUR = 'SUPERVISEUR'
+    SYSADMIN = "SYSADMIN"
     EMPLOYE_AGENCE = 'EMPLOYE_AGENCE'
     RESPONSABLE_AGENCE = 'RESPONSABLE_AGENCE'
     AGENT_COMPENSATION = 'AGENT_COMPENSATION'
@@ -52,6 +53,7 @@ class MyUser(AbstractBaseUser, PermissionsMixin):
     VENDOR = 'VENDOR'
 
     ROLES = [
+        (SYSADMIN, SYSADMIN),
         (EMPLOYE_AGENCE, EMPLOYE_AGENCE),
         (RESPONSABLE_AGENCE, RESPONSABLE_AGENCE),
         (AGENT_COMPENSATION, AGENT_COMPENSATION),
@@ -123,6 +125,24 @@ class Agent(MyUser, PermissionsMixin):
 
     class Meta:
         db_table = "agent"
+
+
+class SysAdmin(MyUser, PermissionsMixin):
+    tel = models.CharField(max_length=50, blank=True, null=True)
+    email = models.EmailField(null=True, blank=True)
+    adresse = models.CharField(max_length=100, null=True, blank=True)
+
+    @property
+    def name(self):
+        return self.first_name + " " + self.last_name
+
+    objects = CustomAccountManager()
+
+    USERNAME_FIELD = 'username'
+    REQUIRED_FIELDS = ['first_name', 'last_name', 'role']
+
+    class Meta:
+        db_table = "sysadmin"
 
 
 class Responsable(MyUser, PermissionsMixin):

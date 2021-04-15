@@ -4,6 +4,8 @@ from .views import *
 from .profil.views import *
 
 urlpatterns = [
+    path('sysadmin/register/', SysAdmin_UserCreate.as_view()),
+
     path('agent/register/', Agent_UserCreate.as_view()),
     path('agent/update/<int:pk>/', AgentUpdateAPIViews.as_view()),
 

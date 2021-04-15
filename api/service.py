@@ -33,8 +33,9 @@ def check_clientDigiPay(request):
             employe = list(Employee.objects.filter(tel=data['tel']))
             responsable = list(Responsable.objects.filter(tel=data['tel']))
             agent = list(Agent.objects.filter(tel=data['tel']))
+            admin = list(SysAdmin.objects.filter(tel=data['tel']))
 
-            if len(vendor) != 0 or len(employe) != 0 or len(responsable) != 0 or len(agent) != 0:
+            if len(vendor) != 0 or len(employe) != 0 or len(responsable) != 0 or len(agent) != 0 or len(admin) !=0:
                 result = {'msg': "Ce numéro de téléphone n'est pas autorisé !"}
                 return JsonResponse(result, safe=False, status=200)
 
@@ -129,6 +130,15 @@ def transactionListByUser(user):
         print('transactions list VENDOR  .....')
         return res
 
+    elif user.role == MyUser.SYSADMIN:
+        transferts_agences = [
+            item.id for item in list(Transfert.objects.all())]
+        # transferts = [item.id for item in list(Transfert_Direct.objects.all())]
+        # pre-transactions ?
+        res = Transaction.objects.filter(transaction__id__in=list(
+            set(transferts_agences))).order_by('-date')
+        print('transactions list SYSADMIN  .....')
+        return res
     else:
         return []
 
@@ -151,6 +161,13 @@ def compensationsListByUser(user):
         res = Transaction.objects.filter(
             transaction__id__in=list(set(compensations))).order_by('-date')
         print('compensations list AGENT_COMPENSATION  .....')
+        return res
+    elif user.role == MyUser.SYSADMIN:
+        compensations = [item.id for item in list(
+            Compensation.objects.all())]
+        res = Transaction.objects.filter(
+            transaction__id__in=list(set(compensations))).order_by('-date')
+        print('compensations list SYSADMIN  .....')
         return res
     else:
         return []

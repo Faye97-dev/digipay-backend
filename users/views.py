@@ -37,6 +37,20 @@ class AgentUpdateAPIViews(generics.RetrieveUpdateAPIView):
     queryset = Agent.objects.all()
 
 
+class SysAdmin_UserCreate(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, format='json'):
+        serializer = SysAdmin_UserSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            # print(user)
+            if user:
+                json = serializer.data
+                return Response(json, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class Employe_UserCreate(APIView):
     permission_classes = [AllowAny]
 
@@ -157,6 +171,10 @@ class currentUserRetriveAPIViews(generics.RetrieveAPIView):
         elif self.request.user.role == MyUser.AGENT_COMPENSATION:
             self.serializer_class = Agent_UserSerializer
             return Agent.objects.get(pk=self.request.user.id)
+
+        elif self.request.user.role == MyUser.SYSADMIN:
+            self.serializer_class = SysAdmin_UserSerializer
+            return SysAdmin.objects.get(pk=self.request.user.id)
 
         return {}
 

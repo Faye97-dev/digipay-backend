@@ -1,7 +1,7 @@
 from django.forms.models import model_to_dict
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework import serializers
-from users.models import MyUser, Agent, Employee, Responsable, Compensation, Client_DigiPay, Client, Vendor, Transfert_Direct, Pre_Transaction
+from users.models import MyUser, Agent, Employee, Responsable, Compensation, Client_DigiPay, Client, Vendor, Transfert_Direct, Pre_Transaction, SysAdmin
 from api.models import Agence
 from api.serializers import AgenceSerializer, AgenceFullSerializer
 
@@ -36,6 +36,30 @@ class Agent_ProfilSerializer(serializers.ModelSerializer):
         model = Agent
         fields = ('id', 'username', 'first_name', 'role',
                   'last_name', 'tel', 'email', 'adresse')
+
+
+class SysAdmin_UserSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(required=True)
+    last_name = serializers.CharField(required=True)
+    password = serializers.CharField(min_length=8, write_only=True)
+
+    class Meta:
+        model = SysAdmin
+        fields = ('id', 'username', 'first_name', 'last_name',
+                  'role', 'password', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login')
+        extra_kwargs = {'password': {'write_only': True},
+                        'id': {'read_only': True}, 'start_date': {'read_only': True}, 'last_login': {'read_only': True}}
+
+    def create(self, validated_data):
+        password = validated_data.pop('password', None)
+        instance = self.Meta.model(**validated_data)
+        if password is not None:
+            instance.set_password(password)
+
+        instance.save()
+        # instance.set_child_id(instance.id)
+
+        return instance
 
 
 class Employe_UserSerializer(serializers.ModelSerializer):
@@ -224,7 +248,8 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             data['start_date'] = data['start_date'].strftime(
                 "%d-%m-%Y %H:%M:%S") if data['start_date'] else data['start_date']
 
-        elif self.user.role == MyUser.AGENT_COMPENSATION:
+        elif self.user.role == MyUser.AGENT_COMPENSATION or self.user.role == MyUser.SYSADMIN:
+            # some update move condition on sysadmin
             agent = Agent.objects.get(id=self.user.id)
             data.update(model_to_dict(agent, fields=['id', 'username', 'first_name', 'last_name',
                                                      'role', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
