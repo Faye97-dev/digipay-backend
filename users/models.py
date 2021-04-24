@@ -257,8 +257,7 @@ class Vendor(MyUser, PermissionsMixin):
     solde = models.FloatField(default=0.0)
     client = models.IntegerField(null=True)
     on_hold = models.FloatField(default=0.0)
-    # myId = models.CharField(unique=True, max_length=5, blank=True)
-    myId = models.IntegerField(null=True)
+    myId = models.CharField(unique=True, max_length=5, blank=True)
 
     @ property
     def name(self):
