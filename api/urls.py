@@ -65,8 +65,8 @@ urlpatterns = [
     # retrait client_digipay and vendor
     path('func/client_digiPay/retrait/', random_code_retrait),
     path('func/client_digiPay/valid-code-payement/', check_codePayement),
-    #path('func/client_digiPay/valid-code-payement/', hello_world),
-
+    path('func/client_digiPay/valid-vendor-id/', client_check_VendorId),
+    path('func/client_digiPay/fast-payement/', client_fast_payement),
     path('func/client_digiPay/payement/', client_payement),
     path('func/client_digiPay/achat-credit/', client_achat_credit),
 
@@ -77,6 +77,7 @@ urlpatterns = [
     path('func/vendor/payement/', vendor_payement),
     path('func/vendor/payback/', vendor_payback),
     path('func/vendor/valid-code-transaction/', check_codeTransaction),
+    path('func/vendor/livraison-client/', livraison_client),
     ###
 
     # agence compensation

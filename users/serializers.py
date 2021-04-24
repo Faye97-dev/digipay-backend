@@ -4,9 +4,20 @@ from rest_framework import serializers
 from users.models import MyUser, Agent, Employee, Responsable, Compensation, Client_DigiPay, Client, Vendor, Transfert_Direct, Pre_Transaction, SysAdmin
 from api.models import Agence
 from api.serializers import AgenceSerializer, AgenceFullSerializer
+import random
+from datetime import datetime
 
+
+def random_with_N_digits(n):
+    start = 10**(n-1)
+    end = (10**n) - 1
+    random.seed(datetime.now())
+    res = random.randint(start, end)
+    return res
 
 # register users
+
+
 class Agent_UserSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(required=True)
     last_name = serializers.CharField(required=True)
@@ -147,7 +158,7 @@ class ClientDigiPay_UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client_DigiPay
         fields = ('id', 'username', 'first_name', 'last_name',
-                  'role', 'password', 'tel', 'email', 'adresse', 'solde', 'client', 'start_date', 'is_active', 'last_login')
+                  'role', 'password', 'tel', 'email', 'adresse', 'solde', "on_hold", 'client', 'start_date', 'is_active', 'last_login')
         extra_kwargs = {'password': {'write_only': True},
                         'id': {'read_only': True}, 'start_date': {'read_only': True}, 'last_login': {'read_only': True}}
 
@@ -182,8 +193,8 @@ class Vendor_UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Vendor
-        fields = ('id', 'username', 'first_name', 'last_name',
-                  'role', 'password', 'tel', 'email', 'adresse', 'solde', 'client', 'start_date', 'is_active', 'last_login')
+        fields = ('id', "myId", 'username', 'first_name', 'last_name',
+                  'role', 'password', 'tel', 'email', 'adresse', 'solde', "on_hold", 'client', 'start_date', 'is_active', 'last_login')
         extra_kwargs = {'password': {'write_only': True},
                         'id': {'read_only': True}, 'start_date': {'read_only': True}, 'last_login': {'read_only': True}}
 
@@ -193,13 +204,25 @@ class Vendor_UserSerializer(serializers.ModelSerializer):
 
         if password is not None:
             instance.set_password(password)
+
+        ##
+        vendors_Id = [item.myId for item in Vendor.objects.all()]
+        repeat = True
+        while repeat:
+            self_vendorId = "0"+str(random_with_N_digits(4))
+            repeat = self_vendorId in vendors_Id
+            print(self_vendorId, repeat)
+
+        instance.myId = self_vendorId
         instance.save()
+
         ##
         client = Client(nom=instance.first_name, tel=instance.tel)
         client.save()
         ##
         instance.client = client.id
         instance.save()
+
         return instance
 
 
@@ -268,8 +291,8 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         elif self.user.role == MyUser.VENDOR:
             vendor = Vendor.objects.get(id=self.user.id)
-            data.update(model_to_dict(vendor, fields=['id', 'username', 'first_name', 'last_name',
-                                                      'role', 'tel', 'solde', 'client', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
+            data.update(model_to_dict(vendor, fields=['id', "myId", 'username', 'first_name', 'last_name',
+                                                      'role', 'tel', 'solde', "on_hold", 'client', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
             data['last_login'] = data['last_login'].strftime(
                 "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
             data['start_date'] = data['start_date'].strftime(
@@ -278,7 +301,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         elif self.user.role == MyUser.CLIENT:
             client = Client_DigiPay.objects.get(id=self.user.id)
             data.update(model_to_dict(client, fields=['id', 'username', 'first_name', 'last_name',
-                                                      'role', 'tel', 'solde', 'client', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
+                                                      'role', 'tel', 'solde', "on_hold", 'client', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
             data['last_login'] = data['last_login'].strftime(
                 "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
             data['start_date'] = data['start_date'].strftime(
@@ -376,4 +399,3 @@ class PreTransactionFullSerializer(serializers.ModelSerializer):
 
 
 # todo List , Update , Get , change pwsd :  ( create : responsable ) , employee , agent
-

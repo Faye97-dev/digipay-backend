@@ -1,6 +1,6 @@
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.http import JsonResponse, HttpResponse
-from .actions import code_payement, payement, remboursement
+from .actions import code_payement, payement, remboursement, annuler_livraison_client, confirmer_livraison_client
 from api.models import Agence
 from users.models import Client_DigiPay, Vendor, MyUser, Pre_Transaction, TransactionModel, Transaction, Transfert_Direct
 from users.serializers import PreTransactionFullSerializer, TransfertDirectFullSerializer
@@ -17,7 +17,8 @@ def random_code_payement(request):
         data = json.loads(request.body.decode('utf-8'))
         try:
             vendor = Vendor.objects.get(id=data['id'])
-            result = code_payement(vendor, data['montant'])
+            result = code_payement(
+                vendor, data['montant'], data['livraison'], data['label'], data['delai'])
             return JsonResponse(result, safe=False, status=201)
         except:
             return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
@@ -32,7 +33,7 @@ def check_codePayement_vendor(request):
         data = json.loads(request.body.decode('utf-8'))
         try:
             pre_transaction = Pre_Transaction.objects.filter(
-                code_secret=data['code'], status=TransactionModel.TO_VALIDATE)
+                code_secret=data['code'], status=TransactionModel.TO_VALIDATE, type_transaction=Pre_Transaction.PAIEMENT)
             if len(list(pre_transaction)) != 0:
                 if pre_transaction[0].expediteur.id != data['vendorId']:
                     result = PreTransactionFullSerializer(
@@ -105,6 +106,24 @@ def vendor_payback(request):
             vendor = Vendor.objects.get(id=data['vendor'])
             result = remboursement(vendor, data['transaction'])
             return JsonResponse(result, safe=False, status=201)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)
+
+
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
+def livraison_client(request):
+    if request.method == 'POST':
+        data = json.loads(request.body.decode('utf-8'))
+        try:
+            if data['confirm']:
+                result = confirmer_livraison_client(data['transaction'])
+                return JsonResponse(result, safe=False, status=201)
+            elif data['confirm'] == False:
+                result = annuler_livraison_client(data['transaction'])
+                return JsonResponse(result, safe=False, status=201)
         except:
             return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
     else:

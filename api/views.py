@@ -143,6 +143,12 @@ class NotificationListAPIViews(generics.ListAPIView):
                 d['transaction'] = CompensationFullSerializer(
                     compensation).data
                 data.append(d)
+            if d['status'] in [Notification.DEMANDE_PAIEMENT]:
+                pre_transaction = Pre_Transaction.objects.get(
+                    id=d['transaction'])
+                d['transaction'] = PreTransactionSerializer(
+                    pre_transaction).data
+                data.append(d)
             else:
                 data.append(d)
         return Response(data)

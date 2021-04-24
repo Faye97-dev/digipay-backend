@@ -3,19 +3,35 @@ from api.models import Agence
 from api.serializers import TransactionFullSerializer, TransfertFullSerializer, NotificationSerializer
 from users.serializers import TransfertDirectFullSerializer
 import uuid
+from datetime import timedelta, datetime
 
 
-def code_payement(vendor, montant):
-    # if vendor.solde >= montant:
-    ##
+def code_payement(vendor, montant, livraison, libele, delai):
     code_confirmation = str(uuid.uuid4().hex[:8].upper())
-    pre_transaction = Pre_Transaction(
-        expediteur=vendor,
-        status=TransactionModel.TO_VALIDATE,
-        type_transaction=Pre_Transaction.PAIEMENT,
-        montant=montant,
-        code_secret=code_confirmation)
-    pre_transaction.save()
+    if not livraison:
+        pre_transaction = Pre_Transaction(
+            expediteur=vendor,
+            status=TransactionModel.TO_VALIDATE,
+            type_transaction=Pre_Transaction.PAIEMENT,
+            montant=montant,
+            code_secret=code_confirmation,
+            livraison=livraison,
+            libele=libele,
+        )
+        pre_transaction.save()
+    else:
+        #delai = datetime.now() + timedelta(days=delai)
+        pre_transaction = Pre_Transaction(
+            expediteur=vendor,
+            status=TransactionModel.TO_VALIDATE,
+            type_transaction=Pre_Transaction.PAIEMENT,
+            montant=montant,
+            code_secret=code_confirmation,
+            livraison=livraison,
+            libele=libele,
+            delai_livraison=delai
+        )
+        pre_transaction.save()
 
     # notifications
     msgSelf = Notification(
@@ -25,9 +41,48 @@ def code_payement(vendor, montant):
 
     result = NotificationSerializer(msgSelf).data
 
-    #vendor.solde -= montant
-    # vendor.save()
     return {'code_confirmation': pre_transaction.code_secret, 'notification': result}
+
+
+def confirmer_livraison_client(transactionId):
+    transaction = Transaction.objects.get(id=transactionId)
+    transfert = Transfert_Direct.objects.get(id=transaction.transaction.id)
+    commercant = Vendor.objects.get(id=transfert.destinataire.id)
+    client = Client_DigiPay.objects.get(id=transfert.expediteur.id)
+
+    client.on_hold -= transfert.montant
+    client.save()
+
+    commercant.solde += transfert.montant
+    commercant.save()
+
+    transfert.status = Transfert.COMFIRMED
+    transfert.save()
+
+    result = TransactionFullSerializer(transaction).data
+    result['transaction'] = TransfertDirectFullSerializer(
+        transfert).data
+
+    return result
+
+
+def annuler_livraison_client(transactionId):
+    transaction = Transaction.objects.get(id=transactionId)
+    transfert = Transfert_Direct.objects.get(id=transaction.transaction.id)
+    client = Client_DigiPay.objects.get(id=transfert.expediteur.id)
+
+    client.on_hold -= transfert.montant
+    client.solde += transfert.montant
+    client.save()
+
+    transfert.status = Transfert.CANCELED
+    transfert.save()
+
+    result = TransactionFullSerializer(transaction).data
+    result['transaction'] = TransfertDirectFullSerializer(
+        transfert).data
+
+    return result
 
 
 def payement(commercant_client, pre_transactionId):
@@ -116,6 +171,11 @@ def remboursement(vendor, transactionId):
 
         prev_transfert.status = TransactionModel.CANCELED
         prev_transfert.save()
-        return result
+
+        prevTransaction_afterUpdate = TransactionFullSerializer(
+            prev_transaction).data
+        prevTransaction_afterUpdate['transaction'] = TransfertDirectFullSerializer(
+            prev_transfert).data
+        return [result, prevTransaction_afterUpdate]
     else:
         return {'msg': "Votre solde est insuffisant pour effectuer cette opération"}

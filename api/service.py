@@ -35,7 +35,7 @@ def check_clientDigiPay(request):
             agent = list(Agent.objects.filter(tel=data['tel']))
             admin = list(SysAdmin.objects.filter(tel=data['tel']))
 
-            if len(vendor) != 0 or len(employe) != 0 or len(responsable) != 0 or len(agent) != 0 or len(admin) !=0:
+            if len(vendor) != 0 or len(employe) != 0 or len(responsable) != 0 or len(agent) != 0 or len(admin) != 0:
                 result = {'msg': "Ce numéro de téléphone n'est pas autorisé !"}
                 return JsonResponse(result, safe=False, status=200)
 

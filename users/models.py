@@ -170,6 +170,7 @@ class Client_DigiPay(MyUser, PermissionsMixin):
     email = models.EmailField(null=True, blank=True)
     adresse = models.CharField(max_length=100, null=True, blank=True)
     solde = models.FloatField(default=0.0)
+    on_hold = models.FloatField(default=0.0)
     client = models.IntegerField(null=True)
 
     @property
@@ -255,8 +256,11 @@ class Vendor(MyUser, PermissionsMixin):
     adresse = models.CharField(max_length=100, null=True, blank=True)
     solde = models.FloatField(default=0.0)
     client = models.IntegerField(null=True)
+    on_hold = models.FloatField(default=0.0)
+    # myId = models.CharField(unique=True, max_length=5, blank=True)
+    myId = models.IntegerField(null=True)
 
-    @property
+    @ property
     def name(self):
         return self.first_name
 
@@ -395,6 +399,11 @@ class Pre_Transaction(TransactionModel):
     destinataire = models.IntegerField(null=True)
     code_secret = models.CharField(max_length=200, blank=True, default='')
 
+    # delai = models.DateTimeField(blank=True, null=True)
+    delai_livraison = models.IntegerField(null=True)
+    libele = models.TextField(blank=True, null=True, default='')
+    livraison = models.BooleanField(default=False)
+
     def client_retrait(self, agenceId, nom_destinataire):
         expediteur = Client_DigiPay.objects.get(id=self.expediteur.id)
         agence_destination = Agence.objects.get(id=agenceId)
@@ -455,6 +464,10 @@ class Transfert_Direct(TransactionModel):
         MyUser, related_name='transferts_direct_recus', on_delete=models.CASCADE)
     code_secret = models.CharField(max_length=200, blank=True, default='')
 
+    delai_livraison = models.IntegerField(null=True)
+    libele = models.TextField(blank=True, null=True, default='')
+    livraison = models.BooleanField(default=False)
+
     class Meta:
         db_table = "transfert_direct"
 
@@ -490,7 +503,7 @@ class Notification(models.Model):
 
 
 # ... remove qrcode img on delete ...
-@receiver(post_delete, sender=Notification)
+@ receiver(post_delete, sender=Notification)
 def submission_delete(sender, instance, **kwargs):
     instance.qrcode.delete(False)
 
@@ -545,7 +558,7 @@ class Transaction(models.Model):
     )
     date = models.DateTimeField()
 
-    @property
+    @ property
     def code_transaction(self):
         # return "TR"+str(self.agence.id).zfill(3)+self.type_transaction+str(self.transaction.id).zfill(5)
         return "TR"+self.type_transaction+str(self.transaction.id).zfill(5)

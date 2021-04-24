@@ -1,9 +1,9 @@
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.http import JsonResponse, HttpResponse
-from .actions import retrait, payement, achat_credit
+from .actions import retrait, payement, achat_credit, fast_payement
 from api.models import *
 from users.models import Client_DigiPay, Vendor, MyUser, TransactionModel, Transfert, Transaction, Pre_Transaction, Transfert_Direct, Client
-from users.serializers import PreTransactionFullSerializer
+from users.serializers import PreTransactionFullSerializer, Vendor_UserSerializer
 from api.serializers import TransfertFullSerializer
 from users.serializers import PreTransactionFullSerializer
 from rest_framework.decorators import api_view, permission_classes
@@ -41,12 +41,30 @@ def check_codePayement(request):
         data = json.loads(request.body.decode('utf-8'))
         try:
             pre_transaction = Pre_Transaction.objects.filter(
-                code_secret=data['code'], status=TransactionModel.TO_VALIDATE)
+                code_secret=data['code'], status=TransactionModel.TO_VALIDATE, type_transaction=Pre_Transaction.PAIEMENT)
             if len(list(pre_transaction)) != 0:
                 result = PreTransactionFullSerializer(pre_transaction[0]).data
                 return JsonResponse(result, safe=False, status=200)
             else:
                 return JsonResponse({'msg': "Ce code n'est pas associé a un paiement ou le code est deja confirmer !"}, safe=False, status=200)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)
+
+
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
+def client_check_VendorId(request):
+    if request.method == 'POST':
+        data = json.loads(request.body.decode('utf-8'))
+        try:
+            commercant = Vendor.objects.filter(myId=data['code'])
+            if len(list(commercant)) != 0:
+                result = Vendor_UserSerializer(commercant[0]).data
+                return JsonResponse(result, safe=False, status=200)
+            else:
+                return JsonResponse({'msg': "Aucun commerçant n'est pas associé a ce numéro d'identification !"}, safe=False, status=200)
         except:
             return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
     else:
@@ -70,6 +88,23 @@ def client_payement(request):
 
 @api_view(['POST'])
 @permission_classes((IsAuthenticated,))
+def client_fast_payement(request):
+    if request.method == 'POST':
+        data = json.loads(request.body.decode('utf-8'))
+        # try:
+        client = Client_DigiPay.objects.get(id=data['client'])
+        commercant = Vendor.objects.get(id=data['vendor'])
+        result = fast_payement(
+            client, commercant, data['montant'], data['label'])
+        return JsonResponse(result, safe=False, status=201)
+        # except:
+        #   return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)
+
+
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
 def client_achat_credit(request):
     if request.method == 'POST':
         data = json.loads(request.body.decode('utf-8'))
@@ -83,11 +118,9 @@ def client_achat_credit(request):
         return HttpResponse(status=405)
 
 
-# need to perform this part move it to client folder
 @api_view(['POST'])
 @permission_classes((IsAuthenticated,))
 def client_digiPay_envoie(request):
-    # handle case if number is a vendor
     if request.method == 'POST':
         data = json.loads(request.body.decode('utf-8'))
         try:
@@ -125,16 +158,3 @@ def client_parSmsRetrait(request):
             return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
     else:
         return HttpResponse(status=405)
-
-
-'''
-@api_view(['POST'])
-@permission_classes((IsAuthenticated,))
-def hello_world(request):
-    if request.method == 'POST':
-        data = json.loads(request.body.decode('utf-8'))
-        print(data, ' hhhhhhh')
-        return JsonResponse({'msg': "Ce code n'est pas associé a un paiement ou le code est deja confirmer !"}, safe=False, status=200)
-    else:
-        return HttpResponse(status=405)
-'''

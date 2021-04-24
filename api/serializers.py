@@ -1,4 +1,4 @@
-from users.models import Client, Transfert, Compensation, Cloture, Transaction, Notification
+from users.models import Client, Transfert, Compensation, Cloture, Transaction, Notification, Pre_Transaction
 from .models import Agence, Commune
 from rest_framework import serializers
 # from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -92,4 +92,11 @@ class NotificationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Notification
+        fields = '__all__'
+
+
+class PreTransactionSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Pre_Transaction
         fields = '__all__'
