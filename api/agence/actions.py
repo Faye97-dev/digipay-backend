@@ -163,9 +163,6 @@ def retrait_par_code(agence, pre_transactionId):
                                   date=transfert.date_creation, categorie_transaction=transfert.categorie_transaction)
         transaction.save()
 
-        pre_transaction.status = TransactionModel.COMFIRMED
-        pre_transaction.save()
-
         agence.solde -= pre_transaction.montant
         agence.retrait += pre_transaction.montant
         agence.save()
@@ -175,6 +172,9 @@ def retrait_par_code(agence, pre_transactionId):
 
         result = TransactionFullSerializer(transaction).data
         result['transaction'] = TransfertFullSerializer(transfert).data
+
+        #pre_transaction.status = TransactionModel.COMFIRMED
+        pre_transaction.delete()
         return result
     else:
         return {'msg': "le solde l'agence est insuffisant pour effectuer cette opération"}

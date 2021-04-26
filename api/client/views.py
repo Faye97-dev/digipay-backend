@@ -91,14 +91,14 @@ def client_payement(request):
 def client_fast_payement(request):
     if request.method == 'POST':
         data = json.loads(request.body.decode('utf-8'))
-        # try:
-        client = Client_DigiPay.objects.get(id=data['client'])
-        commercant = Vendor.objects.get(id=data['vendor'])
-        result = fast_payement(
-            client, commercant, data['montant'], data['label'])
-        return JsonResponse(result, safe=False, status=201)
-        # except:
-        #   return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+        try:
+            client = Client_DigiPay.objects.get(id=data['client'])
+            commercant = Vendor.objects.get(id=data['vendor'])
+            result = fast_payement(
+                client, commercant, data['montant'], data['label'])
+            return JsonResponse(result, safe=False, status=201)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
     else:
         return HttpResponse(status=405)
 

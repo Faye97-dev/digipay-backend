@@ -89,3 +89,7 @@ urlpatterns = [
 ]
 
 urlpatterns += router.urls
+
+
+# todo :
+# block e-commerce and fast payement for vendor ,

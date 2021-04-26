@@ -2,6 +2,7 @@ from users.models import TransactionModel, Transfert, Transaction, Client_DigiPa
 from api.models import Agence
 from api.serializers import TransactionFullSerializer, TransfertFullSerializer
 from users.serializers import TransfertDirectFullSerializer
+from api.utils import random_with_N_digits, random_code
 import uuid
 from random import randint
 
@@ -9,7 +10,10 @@ from random import randint
 def retrait(sender, montant):
     if sender.solde >= montant:
         ##
-        code_confirmation = str(uuid.uuid4().hex[:8].upper())
+        codes_list = [
+            item.code_secret for item in Pre_Transaction.objects.all()]
+        code_confirmation = random_code(4, codes_list)
+
         pre_transaction = Pre_Transaction(
             expediteur=sender,
             destinataire=sender.tel,
@@ -115,7 +119,9 @@ def payement(client, pre_transactionId):
             pre_transaction.delete()
             return result
         else:
-            code_confirmation = str(uuid.uuid4().hex[:8].upper())
+            codes_list = [
+                item.code_secret for item in Pre_Transaction.objects.all()]
+            code_confirmation = random_code(4, codes_list)
             transfert = Transfert_Direct(
                 expediteur=client,
                 destinataire=commercant,
@@ -156,10 +162,12 @@ def payement(client, pre_transactionId):
         return {'msg': "Votre solde est insuffisant pour effectuer cette opération"}
 
 
+'''
 def random_with_N_digits(n):
     range_start = 10**(n-1)
     range_end = (10**n)-1
     return randint(range_start, range_end)
+'''
 
 
 def achat_credit(client, numero, montant):

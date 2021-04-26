@@ -4,16 +4,7 @@ from rest_framework import serializers
 from users.models import MyUser, Agent, Employee, Responsable, Compensation, Client_DigiPay, Client, Vendor, Transfert_Direct, Pre_Transaction, SysAdmin
 from api.models import Agence
 from api.serializers import AgenceSerializer, AgenceFullSerializer
-import random
-from datetime import datetime
-
-
-def random_with_N_digits(n):
-    start = 10**(n-1)
-    end = (10**n) - 1
-    random.seed(datetime.now())
-    res = random.randint(start, end)
-    return res
+from .service import random_with_N_digits
 
 # register users
 

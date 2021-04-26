@@ -36,9 +36,12 @@ def check_codePayement_vendor(request):
                 code_secret=data['code'], status=TransactionModel.TO_VALIDATE, type_transaction=Pre_Transaction.PAIEMENT)
             if len(list(pre_transaction)) != 0:
                 if pre_transaction[0].expediteur.id != data['vendorId']:
-                    result = PreTransactionFullSerializer(
-                        pre_transaction[0]).data
-                    return JsonResponse(result, safe=False, status=200)
+                    if not pre_transaction[0].livraison:
+                        result = PreTransactionFullSerializer(
+                            pre_transaction[0]).data
+                        return JsonResponse(result, safe=False, status=200)
+                    else:
+                        return JsonResponse({'msg': "Le payement avec livraison pour un commerçant n'est pas encore disponible !"}, safe=False, status=200)
                 else:
                     return JsonResponse({'msg': "Ce code est générer par vous même !"}, safe=False, status=200)
             else:

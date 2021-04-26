@@ -7,6 +7,7 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseU
 from api.models import Agence, Commune
 import uuid
 from rest_framework import serializers
+from .service import random_code
 # from .serializers import TransfertDirectFullSerializer
 # from api.serializers import TransactionFullSerializer
 
@@ -222,9 +223,10 @@ class Client_DigiPay(MyUser, PermissionsMixin):
 
     def envoyer_par_sms(self, tel, montant):
         if self.solde >= montant:
-            # self.solde -= montant
-            # self.save()
-            code_confirmation = str(uuid.uuid4().hex[:8].upper())
+            codes_list = [
+                item.code_secret for item in Pre_Transaction.objects.all()]
+            code_confirmation = random_code(4, codes_list)
+            # str(uuid.uuid4().hex[:8].upper())
             pre_transaction = Pre_Transaction(
                 expediteur=self,
                 destinataire=tel,
@@ -259,7 +261,7 @@ class Vendor(MyUser, PermissionsMixin):
     on_hold = models.FloatField(default=0.0)
     myId = models.CharField(unique=True, max_length=5, blank=True)
 
-    @ property
+    @property
     def name(self):
         return self.first_name
 
@@ -398,7 +400,7 @@ class Pre_Transaction(TransactionModel):
     destinataire = models.IntegerField(null=True)
     code_secret = models.CharField(max_length=200, blank=True, default='')
 
-    # delai = models.DateTimeField(blank=True, null=True)
+    #delai = models.DateTimeField(blank=True, null=True)
     delai_livraison = models.IntegerField(null=True)
     libele = models.TextField(blank=True, null=True, default='')
     livraison = models.BooleanField(default=False)
@@ -443,8 +445,8 @@ class Pre_Transaction(TransactionModel):
                     + agence_destination.nom + ' (' + agence_destination.code_agence+')')
                 msgSelf.save()
 
-                self.status = TransactionModel.COMFIRMED
-                self.save()
+                #self.status = TransactionModel.COMFIRMED
+                self.delete()
                 return result
             else:
                 return {'msg': "le solde l'agence est insuffisant pour effectuer cette opération"}
@@ -502,7 +504,7 @@ class Notification(models.Model):
 
 
 # ... remove qrcode img on delete ...
-@ receiver(post_delete, sender=Notification)
+@receiver(post_delete, sender=Notification)
 def submission_delete(sender, instance, **kwargs):
     instance.qrcode.delete(False)
 
@@ -557,7 +559,7 @@ class Transaction(models.Model):
     )
     date = models.DateTimeField()
 
-    @ property
+    @property
     def code_transaction(self):
         # return "TR"+str(self.agence.id).zfill(3)+self.type_transaction+str(self.transaction.id).zfill(5)
         return "TR"+self.type_transaction+str(self.transaction.id).zfill(5)

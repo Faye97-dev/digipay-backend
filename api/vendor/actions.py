@@ -3,11 +3,14 @@ from api.models import Agence
 from api.serializers import TransactionFullSerializer, TransfertFullSerializer, NotificationSerializer
 from users.serializers import TransfertDirectFullSerializer
 import uuid
-from datetime import timedelta, datetime
+#from datetime import timedelta, datetime
+from api.utils import random_code
 
 
 def code_payement(vendor, montant, livraison, libele, delai):
-    code_confirmation = str(uuid.uuid4().hex[:8].upper())
+    codes_list = [item.code_secret for item in Pre_Transaction.objects.all()]
+    code_confirmation = random_code(4, codes_list)
+
     if not livraison:
         pre_transaction = Pre_Transaction(
             expediteur=vendor,
