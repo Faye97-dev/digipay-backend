@@ -8,8 +8,8 @@ from api.models import Agence, Commune
 import uuid
 from rest_framework import serializers
 from .service import random_code
-# from .serializers import TransfertDirectFullSerializer
-# from api.serializers import TransactionFullSerializer
+
+# users models #
 
 
 class CustomAccountManager(BaseUserManager):
@@ -173,6 +173,11 @@ class Client_DigiPay(MyUser, PermissionsMixin):
     solde = models.FloatField(default=0.0)
     on_hold = models.FloatField(default=0.0)
     client = models.IntegerField(null=True)
+    valide_en_agence = models.BooleanField(default=False)
+    compte_banquaire = models.CharField(
+        max_length=70, null=True, unique=True)
+    device_connecte = models.CharField(
+        max_length=70, null=True, unique=True)
 
     @property
     def name(self):
@@ -207,6 +212,7 @@ class Client_DigiPay(MyUser, PermissionsMixin):
                 transfert).data
 
             # notifications
+            '''
             msgSelf = Notification(
                 user=self, transaction=transfert, status=Notification.ENVOI,
                 message="Vous avez effectué un envoi de " + str(montant) + " MRU vers " + Client.name + ' (' + Client.tel+')')
@@ -216,6 +222,7 @@ class Client_DigiPay(MyUser, PermissionsMixin):
                 user=Client, transaction=transfert, status=Notification.ENVOI,
                 message="Vous avez reçu un montant de " + str(montant) + " MRU de " + self.name + ' (' + self.tel+')')
             msgClient.save()
+            '''
 
             return result
         else:
@@ -260,6 +267,8 @@ class Vendor(MyUser, PermissionsMixin):
     client = models.IntegerField(null=True)
     on_hold = models.FloatField(default=0.0)
     myId = models.CharField(unique=True, max_length=5, blank=True)
+    compte_banquaire = models.CharField(
+        max_length=70, blank=True, null=True, unique=True)
 
     @property
     def name(self):
@@ -273,8 +282,9 @@ class Vendor(MyUser, PermissionsMixin):
     class Meta:
         db_table = "vendor"
 
+#####################################################################################
 
-# Acteurs models
+
 class Cloture(models.Model):
     date = models.DateTimeField(null=True)
     solde = models.FloatField(default=0.0)
@@ -287,6 +297,38 @@ class Cloture(models.Model):
 
     class Meta:
         db_table = "cloture"
+
+
+class Cagnote(models.Model):
+    nom = models.CharField(max_length=100)
+    responsable = models.ForeignKey(MyUser, on_delete=models.CASCADE)
+    solde = models.FloatField(default=0.0)
+    objectif = models.FloatField(default=0.0)
+    motif = models.CharField(max_length=200, blank=True, null=True)
+    actif = models.BooleanField(default=True)
+    verse_au_solde = models.BooleanField(default=False)
+    date = models.DateTimeField(auto_now_add=True, null=True)
+
+    @property
+    def nbre_participants(self):
+        return len(Participants_Cagnote.objects.filter(cagnote=self))
+
+    @property
+    def numero_cagnote(self):
+        return "99"+str(self.id).zfill(5)
+
+    class Meta:
+        db_table = "cagnote"
+
+
+class Participants_Cagnote(models.Model):
+    cagnote = models.ForeignKey(Cagnote, on_delete=models.CASCADE)
+    participant = models.ForeignKey(MyUser, on_delete=models.CASCADE)
+    montant = models.FloatField(default=0.0)
+    date = models.DateTimeField(auto_now_add=True, null=True)
+
+    class Meta:
+        db_table = "participant_cagnote"
 
 
 class TransactionModel(models.Model):
@@ -322,19 +364,10 @@ class TransactionModel(models.Model):
 
 
 class Compensation(TransactionModel):
-    # COMP_VERSEMENT = '03'
-    # COMP_RETRAIT = '04'
-    # TYPES = [
-    #   (COMP_VERSEMENT, 'COMP_VERSEMENT'),
-    #   (COMP_RETRAIT, 'COMP_RETRAIT'),
-    # ]
-
     agent = models.ForeignKey(
         Agent, related_name="compensations", on_delete=models.CASCADE)
     agence = models.ForeignKey(
         Agence, related_name="compensations", on_delete=models.CASCADE)
-
-    # type_transaction = models.CharField(max_length=4,choices=TYPES,)
 
     class Meta:
         db_table = "compensation"
@@ -435,6 +468,7 @@ class Pre_Transaction(TransactionModel):
                 result['transaction'] = TransfertFullSerializer(transfert).data
 
                 # notifications
+                '''
                 msgSelf = Notification(
                     user=expediteur, transaction=transfert, status=Notification.RETRAIT,
                     message="Un retrait de " +
@@ -444,6 +478,7 @@ class Pre_Transaction(TransactionModel):
                     str(destinataire.tel) + ") chez l'agence "
                     + agence_destination.nom + ' (' + agence_destination.code_agence+')')
                 msgSelf.save()
+                '''
 
                 #self.status = TransactionModel.COMFIRMED
                 self.delete()
@@ -473,6 +508,21 @@ class Transfert_Direct(TransactionModel):
         db_table = "transfert_direct"
 
 
+class Transfert_Cagnote(TransactionModel):
+    DONATION = 'DONATION'
+    RECOLTE = 'RECOLTE'
+    TYPES = [
+        (DONATION, 'DONATION'),
+        (RECOLTE, 'RECOLTE'),
+    ]
+    expediteur = models.IntegerField()
+    destinataire = models.IntegerField()
+    type_transaction = models.CharField(max_length=30, choices=TYPES,)
+
+    class Meta:
+        db_table = "transfert_cagnote"
+
+
 class Notification(models.Model):
     DEMANDE_PAIEMENT = 'DEMANDE_PAIEMENT'
     DEMANDE_RETRAIT = 'DEMANDE_RETRAIT'
@@ -494,6 +544,8 @@ class Notification(models.Model):
     transaction = models.ForeignKey(TransactionModel, on_delete=models.CASCADE)
 
     message = models.CharField(max_length=200, blank=True, default='')
+    message_ar = models.CharField(max_length=200, blank=True, default='')
+
     status = models.CharField(
         max_length=50, choices=TAGS, default="DEMANDE DE PAIEMENT")
     date = models.DateTimeField(auto_now_add=True, null=True)
@@ -503,14 +555,13 @@ class Notification(models.Model):
         db_table = "notification"
 
 
-# ... remove qrcode img on delete ...
 @receiver(post_delete, sender=Notification)
 def submission_delete(sender, instance, **kwargs):
+    # ... remove qrcode img on delete ...
     instance.qrcode.delete(False)
 
 
-# Dashboard models
-
+# Transactions model
 
 class Transaction(models.Model):
     TRANSFERT = '01'
@@ -521,9 +572,12 @@ class Transaction(models.Model):
     PAIEMENT = '06'
     ENVOI = '07'
     REMBOURSEMENT = '08'
+    DONATION = '09'
+    RECOLTE = '10'
     TYPES = [
         (TRANSFERT, 'TRANSFERT'),
         (RETRAIT, 'RETRAIT'),
+        ###
         (COMP_VERSEMENT, 'COMP_VERSEMENT'),
         (COMP_RETRAIT, 'COMP_RETRAIT'),
         ###
@@ -531,6 +585,9 @@ class Transaction(models.Model):
         (PAIEMENT, 'PAIEMENT'),
         (ENVOI, 'ENVOI'),
         (REMBOURSEMENT, 'REMBOURSEMENT'),
+        ###
+        (DONATION, 'DONATION'),
+        (RECOLTE, 'RECOLTE'),
 
     ]
 

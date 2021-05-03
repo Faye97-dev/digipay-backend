@@ -9,12 +9,15 @@ from random import randint
 def pre_compensation(agent, data):
     transaction_type = None
     msg_transaction_type = None
+    #msg_transaction_type_ar = None
     if data['type_trans'] == 'versement':
         transaction_type = Transaction.COMP_VERSEMENT
-        msg_transaction_type = 'Versement'
+        msg_transaction_type = 'versement'
+        #msg_transaction_type_ar = 'دفع'
     elif data['type_trans'] == 'retrait':
         transaction_type = Transaction.COMP_RETRAIT
-        msg_transaction_type = 'Retrait'
+        msg_transaction_type = 'retrait'
+        #msg_transaction_type_ar = 'سحب'
     else:
         return {'msg': "le type de transaction est invalid !"}
     ##
@@ -40,7 +43,11 @@ def pre_compensation(agent, data):
 
     msgAgence = Notification(
         user=responsable, transaction=compensation, status=Notification.DEMANDE_COMPENSATION,
-        message="Voulez vous confirmer une compensation de " + msg_transaction_type + " de " + str(compensation.montant) + " MRU venant de l'agent : "+agent.name + "--"+agent.tel)
+        message="Voulez vous confirmer une compensation de " + msg_transaction_type + " de " + str(compensation.montant) + " MRU venant de l'agent : " +
+        agent.name + "--"+agent.tel)
+
+    # message_ar=f"{agent.tel}--{agent.name} أوقية من وكيل {compensation.montant} {msg_transaction_type_ar} هل تريد تأكيد تعويض")
+
     msgAgence.save()
 
     result = TransactionFullSerializer(transaction).data

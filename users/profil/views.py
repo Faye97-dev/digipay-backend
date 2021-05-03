@@ -44,3 +44,18 @@ def valid_vendor_username(request):
             return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
     else:
         return HttpResponse(status=405)
+
+
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
+def valid_code_PIN(request):
+    if request.method == 'POST':
+        data = json.loads(request.body.decode('utf-8'))
+        try:
+            user = MyUser.objects.get(id=data['id'])
+            valid_PIN = user.check_password(data['PIN'])
+            return JsonResponse({'PIN': valid_PIN}, safe=False, status=200)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)

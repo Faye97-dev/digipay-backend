@@ -7,11 +7,11 @@ from rest_framework import status, generics, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .serializers import *
-from users.serializers import CompensationFullSerializer, TransfertDirectFullSerializer
+from users.serializers import CompensationFullSerializer, TransfertDirectFullSerializer, CagnoteSerializer, Transfert_CagnoteFullSerializer
 from users.models import Transfert
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import *
-from users.models import MyUser, Responsable, Employee, Client_DigiPay, Vendor, Transfert_Direct, Notification, Agent
+from users.models import MyUser, Responsable, Employee, Client_DigiPay, Vendor, Transfert_Direct, Notification, Agent, Participants_Cagnote, Cagnote, Transfert_Cagnote
 from .filters import *
 from django.forms.models import model_to_dict
 from .service import transactionListByUser, compensationsListByUser
@@ -116,12 +116,13 @@ class CompensationUpdateAPIViews(generics.RetrieveUpdateAPIView):
 
 
 # clotures views
+'''
 class ClotureViewsets(viewsets.ModelViewSet):
     serializer_class = ClotureSerializer
     permission_classes = [IsAuthenticated]
     queryset = Cloture.objects.all()
     filterset_class = ClotureFilter
-
+'''
 # notfication views
 
 
@@ -193,6 +194,12 @@ class TransactionListAPIViews(generics.ListAPIView):
                 d['transaction'] = TransfertDirectFullSerializer(
                     transfert).data
                 data.append(d)
+            elif d['type_transaction'] in [Transaction.DONATION, Transaction.RECOLTE]:
+                transfert = Transfert_Cagnote.objects.get(
+                    id=d['transaction'])
+                d['transaction'] = Transfert_CagnoteFullSerializer(
+                    transfert).data
+                data.append(d)
             else:
                 data.append(d)
         return Response(data)
@@ -252,6 +259,24 @@ class TransactionCreateAPIViews(generics.CreateAPIView):
     queryset = Transaction.objects.all()
 
 
+'''
+class ParticipationCagnoteListAPIViews(generics.ListAPIView):
+    serializer_class = ParticipationCagnoteFullSerializer
+    permission_classes = [IsAuthenticated]
+    #queryset = Transaction.objects.all().order_by('-date')
+
+    def get_queryset(self):
+        return participationCagnoteListByUser(self.request.user)
+'''
+
+'''
+class CagnoteCreateAPIViews(generics.CreateAPIView):
+    serializer_class = CagnoteSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = Cagnote.objects.all()
+'''
 ####
+
+
 def home(request):
     return render(request, 'index.html')

@@ -31,6 +31,6 @@ urlpatterns = [
 
     path('auth-user/get/<int:pk>/', currentUserRetriveAPIViews.as_view()),
     path('password/update/<int:pk>/', UpdatePasswordView.as_view()),
-
+    path('func/valid-PIN/', valid_code_PIN),
 
 ]

@@ -9,7 +9,7 @@ from .vendor.views import *
 from .agent.views import *
 router = routers.DefaultRouter()
 router.register('client', ClientViewsets)
-router.register('cloture', ClotureViewsets)
+#router.register('cloture', ClotureViewsets)
 
 urlpatterns = [
     path('commune/list/', CommuneAPIViews.as_view()),
@@ -37,6 +37,8 @@ urlpatterns = [
     path('transaction/get/<int:pk>/', TransactionRetriveAPIViews.as_view()),
     path('transaction/create/', TransactionCreateAPIViews.as_view()),
 
+    path('cagnote/create/', createCagnote),
+    path('cagnote/list/', getCagnoteList),
     ###
     #path('func/transfert/add/', add_transfert),
     #path('func/transfert/error/', error_transfert),
@@ -69,7 +71,9 @@ urlpatterns = [
     path('func/client_digiPay/fast-payement/', client_fast_payement),
     path('func/client_digiPay/payement/', client_payement),
     path('func/client_digiPay/achat-credit/', client_achat_credit),
-
+    path('func/client_digiPay/valid-cagnote-code/', check_cagnote_byId),
+    path('func/client_digiPay/participer-cagnote/', client_participer_cagnote),
+    path('func/client_digiPay/cloturer-cagnote/', client_cloturer_cagnote),
 
     # Digipay vendor
     path('func/vendor/gen-code-payement/', random_code_payement),
@@ -78,6 +82,10 @@ urlpatterns = [
     path('func/vendor/payback/', vendor_payback),
     path('func/vendor/valid-code-transaction/', check_codeTransaction),
     path('func/vendor/livraison-client/', livraison_client),
+    path('func/vendor/livraison-vendor/', livraison_vendor),
+    path('func/vendor/valid-vendor-id/', vendor_check_VendorId),
+    path('func/vendor/fast-payement/', vendor_fast_payement),
+
     ###
 
     # agence compensation

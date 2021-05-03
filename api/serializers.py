@@ -65,10 +65,12 @@ class CompensationSerializer(serializers.ModelSerializer):
 # CompensationFullSerializer in users.Serializer ...
 
 
+'''
 class ClotureSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cloture
         fields = '__all__'
+'''
 
 
 class TransactionSerializer(serializers.ModelSerializer):

@@ -1,7 +1,8 @@
 from users.models import TransactionModel, Transfert, Transaction, Client_DigiPay, MyUser, Vendor, Client, Pre_Transaction, Notification, Transfert_Direct
+from users.models import Participants_Cagnote, Cagnote, Transfert_Cagnote
 from api.models import Agence
 from api.serializers import TransactionFullSerializer, TransfertFullSerializer
-from users.serializers import TransfertDirectFullSerializer
+from users.serializers import TransfertDirectFullSerializer, CagnoteFullSerializer
 from api.utils import random_with_N_digits, random_code
 import uuid
 from random import randint
@@ -29,7 +30,7 @@ def retrait(sender, montant):
             message="Vous avez fait une demande de retrait de " + str(montant) + " MRU avec le code confirmation: "+pre_transaction.code_secret)
         msgSelf.save()
 
-        #sender.solde -= montant
+        # sender.solde -= montant
         # sender.save()
         return {'code_confirmation': "Opération réussie !"}
     else:
@@ -54,6 +55,7 @@ def fast_payement(client, commercant, montant, libele):
         result['transaction'] = TransfertDirectFullSerializer(
             transfert).data
 
+        '''
         msgClient = Notification(
             user=client, transaction=transfert, status=Notification.PAIEMENT,
             message="Vous avez effectué un paiement de " + str(montant) + " MRU au commerçant " + commercant.name + ' (' + commercant.tel+')')
@@ -63,6 +65,7 @@ def fast_payement(client, commercant, montant, libele):
             user=commercant, transaction=transfert, status=Notification.PAIEMENT,
             message="Vous avez reçu un paiement de " + str(montant) + " MRU du client " + client.name + ' (' + client.tel+')')
         msgCommercant.save()
+        '''
 
         client.solde -= montant
         client.save()
@@ -99,7 +102,7 @@ def payement(client, pre_transactionId):
                 transfert).data
 
             # notifications
-
+            '''
             msgClient = Notification(
                 user=client, transaction=transfert, status=Notification.PAIEMENT,
                 message="Vous avez effectué un paiement de " + str(pre_transaction.montant) + " MRU au commerçant " + commercant.name + ' (' + commercant.tel+') avec le code confirmation: '+pre_transaction.code_secret)
@@ -109,6 +112,7 @@ def payement(client, pre_transactionId):
                 user=commercant, transaction=transfert, status=Notification.PAIEMENT,
                 message="Vous avez reçu un paiement de " + str(pre_transaction.montant) + " MRU du client " + client.name + ' (' + client.tel+') avec le code confirmation: '+pre_transaction.code_secret)
             msgCommercant.save()
+            '''
 
             client.solde -= pre_transaction.montant
             client.save()
@@ -142,6 +146,7 @@ def payement(client, pre_transactionId):
                 transfert).data
 
             # notifications
+            '''
             msgClient = Notification(
                 user=client, transaction=transfert, status=Notification.PAIEMENT,
                 message="Vous avez effectué un paiement de " + str(pre_transaction.montant) + " MRU au commerçant " + commercant.name + ' (' + commercant.tel+'). Merci de fournir le code livraison '+transfert.code_secret)
@@ -151,6 +156,7 @@ def payement(client, pre_transactionId):
                 user=commercant, transaction=transfert, status=Notification.PAIEMENT,
                 message="Vous avez reçu un paiement de " + str(pre_transaction.montant) + " MRU du client " + client.name + ' (' + client.tel+') . Merci de confirmer la livraison')
             msgCommercant.save()
+            '''
 
             client.on_hold += pre_transaction.montant
             client.solde -= pre_transaction.montant
@@ -160,14 +166,6 @@ def payement(client, pre_transactionId):
             return result
     else:
         return {'msg': "Votre solde est insuffisant pour effectuer cette opération"}
-
-
-'''
-def random_with_N_digits(n):
-    range_start = 10**(n-1)
-    range_end = (10**n)-1
-    return randint(range_start, range_end)
-'''
 
 
 def achat_credit(client, numero, montant):
@@ -198,15 +196,18 @@ def achat_credit(client, numero, montant):
             transfert).data
 
         # notifications
+
         msgClient = Notification(
             user=client, transaction=transfert, status=Notification.PAIEMENT,
             message="Vous avez acheté une carte de credit de " + str(montant) + " MRU , le code de recharge est : " + carte)
         msgClient.save()
 
+        '''
         msgCommercant = Notification(
             user=commercant, transaction=transfert, status=Notification.PAIEMENT,
             message="Vous avez reçu un achat de credit de " + str(montant) + " MRU du client " + client.name + ' (' + client.tel+')')
         msgCommercant.save()
+        '''
 
         client.solde -= montant
         client.save()
@@ -216,3 +217,74 @@ def achat_credit(client, numero, montant):
         return result
     else:
         return {'msg': "Votre solde est insuffisant pour effectuer cette opération"}
+
+
+def participer_cagnote(client, cagnote, montant):
+    if client.solde >= montant:
+        participation = Participants_Cagnote(
+            participant=client, cagnote=cagnote, montant=montant)
+        participation.save()
+
+        transfert = Transfert_Cagnote(
+            expediteur=client.id,
+            destinataire=cagnote.id,
+            type_transaction=Transfert_Cagnote.DONATION,
+            status=TransactionModel.COMFIRMED,
+            montant=montant,
+        )
+        transfert.save()
+
+        transaction = Transaction(
+            transaction=transfert, type_transaction=Transaction.DONATION, date=transfert.date_creation)
+        transaction.save()
+
+        client.solde -= montant
+        client.save()
+
+        cagnote.solde += montant
+        cagnote.save()
+
+        result = {}
+        result['cagnote'] = CagnoteFullSerializer(cagnote).data
+        result['participation'] = {
+            'montant': participation.montant, 'date': participation.date.strftime('%d-%m-%Y %H:%M:%S')}
+
+        return result
+    else:
+        return {'msg': "Votre solde est insuffisant pour effectuer cette opération"}
+
+
+def cloturer_cagnote(client, cagnote):
+    transfert = Transfert_Cagnote(
+        expediteur=cagnote.id,
+        destinataire=client.id,
+        type_transaction=Transfert_Cagnote.RECOLTE,
+        status=TransactionModel.COMFIRMED,
+        montant=cagnote.solde,
+    )
+    transfert.save()
+
+    transaction = Transaction(
+        transaction=transfert, type_transaction=Transaction.RECOLTE, date=transfert.date_creation)
+    transaction.save()
+
+    client.solde += transfert.montant
+    client.save()
+
+    cagnote.actif = False
+    cagnote.verse_au_solde = True
+    cagnote.solde = 0
+    cagnote.save()
+
+    result = {}
+    result['cagnote'] = CagnoteFullSerializer(cagnote).data
+    participation = Participants_Cagnote.objects.filter(
+        participant=client, cagnote=cagnote)
+
+    if len(list(participation)) != 0:
+        result['participation'] = {
+            'montant': participation[0].montant, 'date': participation[0].date.strftime('%d-%m-%Y %H:%M:%S')}
+    else:
+        result['participation'] = None
+
+    return result

@@ -107,8 +107,15 @@ def transactionListByUser(user):
             expediteur=user))]
         retraits = [item.id for item in list(Transfert_Direct.objects.filter(
             destinataire=user))]
+
+        donations = [item.id for item in list(Transfert_Cagnote.objects.filter(
+            expediteur=user.id))]
+        recoltes = [item.id for item in list(Transfert_Cagnote.objects.filter(
+            destinataire=user.id))]
+
+        all_ = retraits_agence+recharges_agence+transferts+retraits+donations+recoltes
         res = Transaction.objects.filter(
-            transaction__id__in=list(set(retraits_agence+recharges_agence+transferts+retraits))).order_by('-date')
+            transaction__id__in=list(set(all_))).order_by('-date')
         print('transactions list CLIENT  .....')
         return res
 
@@ -168,6 +175,15 @@ def compensationsListByUser(user):
         res = Transaction.objects.filter(
             transaction__id__in=list(set(compensations))).order_by('-date')
         print('compensations list SYSADMIN  .....')
+        return res
+    else:
+        return []
+
+
+def participationCagnoteListByUser(user):
+    if user.role == MyUser.CLIENT:
+        res = Participants_Cagnote.objects.filter(
+            participant=user)
         return res
     else:
         return []

@@ -180,9 +180,6 @@ class currentUserRetriveAPIViews(generics.RetrieveAPIView):
 
 
 class UpdatePasswordView(generics.UpdateAPIView):
-    """
-    An endpoint for changing password.
-    """
     serializer_class = ChangePasswordSerializer
     model = MyUser
     permission_classes = (IsAuthenticated,)

@@ -1,13 +1,13 @@
+import json
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.decorators import api_view, permission_classes
+from api.serializers import TransactionFullSerializer
+from users.serializers import PreTransactionFullSerializer, TransfertDirectFullSerializer, Vendor_UserSerializer
+from users.models import Client_DigiPay, Vendor, MyUser, Pre_Transaction, TransactionModel, Transaction, Transfert_Direct
+from api.models import Agence
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.http import JsonResponse, HttpResponse
-from .actions import code_payement, payement, remboursement, annuler_livraison_client, confirmer_livraison_client
-from api.models import Agence
-from users.models import Client_DigiPay, Vendor, MyUser, Pre_Transaction, TransactionModel, Transaction, Transfert_Direct
-from users.serializers import PreTransactionFullSerializer, TransfertDirectFullSerializer
-from api.serializers import TransactionFullSerializer
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny
-import json
+from .actions import code_payement, payement, fast_payement, remboursement, annuler_livraison_client, confirmer_livraison_client, confirmer_livraison_vendor, annuler_livraison_vendor
 
 
 @api_view(['POST'])
@@ -36,16 +36,31 @@ def check_codePayement_vendor(request):
                 code_secret=data['code'], status=TransactionModel.TO_VALIDATE, type_transaction=Pre_Transaction.PAIEMENT)
             if len(list(pre_transaction)) != 0:
                 if pre_transaction[0].expediteur.id != data['vendorId']:
-                    if not pre_transaction[0].livraison:
-                        result = PreTransactionFullSerializer(
-                            pre_transaction[0]).data
-                        return JsonResponse(result, safe=False, status=200)
-                    else:
-                        return JsonResponse({'msg': "Le payement avec livraison pour un commerçant n'est pas encore disponible !"}, safe=False, status=200)
+                    # if not pre_transaction[0].livraison:
+                    result = PreTransactionFullSerializer(
+                        pre_transaction[0]).data
+                    return JsonResponse(result, safe=False, status=200)
                 else:
-                    return JsonResponse({'msg': "Ce code est générer par vous même !"}, safe=False, status=200)
+                    return JsonResponse({'msg': "Ce code de payement est générer par vous même !"}, safe=False, status=200)
             else:
                 return JsonResponse({'msg': "Ce code n'est pas associé a un paiement ou le code est deja confirmer !"}, safe=False, status=200)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)
+
+
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
+def vendor_fast_payement(request):
+    if request.method == 'POST':
+        data = json.loads(request.body.decode('utf-8'))
+        try:
+            commercant_client = Vendor.objects.get(id=data['client'])
+            commercant = Vendor.objects.get(id=data['vendor'])
+            result = fast_payement(
+                commercant_client, commercant, data['montant'], data['label'])
+            return JsonResponse(result, safe=False, status=201)
         except:
             return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
     else:
@@ -61,6 +76,27 @@ def vendor_payement(request):
             vendor = Vendor.objects.get(id=data['vendor'])
             result = payement(vendor, data['pre_transaction'])
             return JsonResponse(result, safe=False, status=201)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)
+
+
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
+def vendor_check_VendorId(request):
+    if request.method == 'POST':
+        data = json.loads(request.body.decode('utf-8'))
+        try:
+            commercant = Vendor.objects.filter(myId=data['code'])
+            if len(list(commercant)) != 0:
+                if commercant[0].id != data['vendorId']:
+                    result = Vendor_UserSerializer(commercant[0]).data
+                    return JsonResponse(result, safe=False, status=200)
+                else:
+                    return JsonResponse({'msg': "Ce numéro d'identification est le votre !"}, safe=False, status=200)
+            else:
+                return JsonResponse({'msg': "Aucun commerçant n'est pas associé a ce numéro d'identification !"}, safe=False, status=200)
         except:
             return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
     else:
@@ -126,6 +162,24 @@ def livraison_client(request):
                 return JsonResponse(result, safe=False, status=201)
             elif data['confirm'] == False:
                 result = annuler_livraison_client(data['transaction'])
+                return JsonResponse(result, safe=False, status=201)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)
+
+
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
+def livraison_vendor(request):
+    if request.method == 'POST':
+        data = json.loads(request.body.decode('utf-8'))
+        try:
+            if data['confirm']:
+                result = confirmer_livraison_vendor(data['transaction'])
+                return JsonResponse(result, safe=False, status=201)
+            elif data['confirm'] == False:
+                result = annuler_livraison_vendor(data['transaction'])
                 return JsonResponse(result, safe=False, status=201)
         except:
             return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)

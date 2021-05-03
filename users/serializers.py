@@ -1,18 +1,19 @@
 from django.forms.models import model_to_dict
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework import serializers
+from rest_framework import serializers, exceptions
 from users.models import MyUser, Agent, Employee, Responsable, Compensation, Client_DigiPay, Client, Vendor, Transfert_Direct, Pre_Transaction, SysAdmin
+from users.models import Cagnote, Participants_Cagnote, Transfert_Cagnote
 from api.models import Agence
 from api.serializers import AgenceSerializer, AgenceFullSerializer
 from .service import random_with_N_digits
-
+import json
 # register users
 
 
 class Agent_UserSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(required=True)
     last_name = serializers.CharField(required=True)
-    password = serializers.CharField(min_length=8, write_only=True)
+    password = serializers.CharField(min_length=4, write_only=True)
 
     class Meta:
         model = Agent
@@ -43,7 +44,7 @@ class Agent_ProfilSerializer(serializers.ModelSerializer):
 class SysAdmin_UserSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(required=True)
     last_name = serializers.CharField(required=True)
-    password = serializers.CharField(min_length=8, write_only=True)
+    password = serializers.CharField(min_length=4, write_only=True)
 
     class Meta:
         model = SysAdmin
@@ -67,7 +68,7 @@ class SysAdmin_UserSerializer(serializers.ModelSerializer):
 class Employe_UserSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(required=True)
     last_name = serializers.CharField(required=True)
-    password = serializers.CharField(min_length=8, write_only=True)
+    password = serializers.CharField(min_length=4, write_only=True)
 
     class Meta:
         model = Employee
@@ -109,7 +110,7 @@ class Employe_ProfilSerializer(serializers.ModelSerializer):
 class Responsable_UserSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(required=True)
     last_name = serializers.CharField(required=True)
-    password = serializers.CharField(min_length=8, write_only=True)
+    password = serializers.CharField(min_length=4, write_only=True)
     agence = AgenceSerializer()
 
     class Meta:
@@ -144,18 +145,21 @@ class ClientDigiPay_UserSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(required=True)
     last_name = serializers.CharField(required=True)
     tel = serializers.CharField(required=True)
-    password = serializers.CharField(min_length=8, write_only=True)
+    password = serializers.CharField(min_length=4, write_only=True)
 
     class Meta:
         model = Client_DigiPay
-        fields = ('id', 'username', 'first_name', 'last_name',
+        fields = ('id', 'device_connecte', 'username', 'first_name', 'last_name',
                   'role', 'password', 'tel', 'email', 'adresse', 'solde', "on_hold", 'client', 'start_date', 'is_active', 'last_login')
-        extra_kwargs = {'password': {'write_only': True},
+        extra_kwargs = {'password': {'write_only': True}, 'device_connecte': {'write_only': True},
                         'id': {'read_only': True}, 'start_date': {'read_only': True}, 'last_login': {'read_only': True}}
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)
         instance = self.Meta.model(**validated_data)
+
+        device_connecte = validated_data.pop('device_connecte', None)
+        print(device_connecte)
 
         if password is not None:
             instance.set_password(password)
@@ -180,7 +184,7 @@ class CLientDigipay_ProfilSerializer(serializers.ModelSerializer):
 class Vendor_UserSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(required=True)
     tel = serializers.CharField(required=True)
-    password = serializers.CharField(min_length=8, write_only=True)
+    password = serializers.CharField(min_length=4, write_only=True)
 
     class Meta:
         model = Vendor
@@ -229,83 +233,129 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     #name = serializers.CharField(required=False)
 
     def validate(self, attrs):
-        data = super().validate(attrs)
-        refresh = self.get_token(self.user)
-        data['refresh'] = str(refresh)
-        data['access'] = str(refresh.access_token)
+        #request_data = json.loads(request.body.decode('utf-8'))
+        #login_success = False
 
-        # Add extra responses here
-        if self.user.role == MyUser.RESPONSABLE_AGENCE:
-            responsable = Responsable.objects.get(id=self.user.id)
-            agence = Agence.objects.get(responsable__id=self.user.id)
-            data['agence'] = model_to_dict(agence)
-            data['agence']['last_date_cloture'] = data['agence']['last_date_cloture'].strftime(
-                "%d-%m-%Y %H:%M:%S") if data['agence']['last_date_cloture'] else data['agence']['last_date_cloture']
-            # print(data['agence']['last_date_cloture'])
-            data.update(model_to_dict(responsable, fields=['id', 'username', 'first_name', 'last_name',
-                                                           'role', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
-            data['last_login'] = data['last_login'].strftime(
-                "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
-            data['start_date'] = data['start_date'].strftime(
-                "%d-%m-%Y %H:%M:%S") if data['start_date'] else data['start_date']
+        device_authorized = False
+        try:
+            request = self.context['request']
+            request_data = request.data
+        except:
+            device_authorized = True
+            print("Request error")
+            raise exceptions.AuthenticationFailed("Request error !", "error")
+        else:
+            try:
+                user = MyUser.objects.get(username=request_data['username'])
+            except:
+                device_authorized = True
+                print("Utilisateur Inexistant !")
+                raise exceptions.AuthenticationFailed(
+                    "Utilisateur Inexistant !", "error")
+            else:
+                '''
+                if user.role == MyUser.CLIENT:
+                    user = Client_DigiPay.objects.get(id=user.id)
+                    if 'device_connecte' in request_data.keys():
+                        if user.device_connecte:
+                            if user.device_connecte == request_data['device_connecte']:
+                                device_authorized = True
+                            else:
+                                device_authorized = False
+                        else:
+                            # handle credentials before save
+                            user.device_connecte = request_data['device_connecte']
+                            user.save()
+                            device_authorized = True
+                    else:
+                        device_authorized = False
+                        print("device connecte non renseigner !")
+                else:
+                    device_authorized = True
+                '''
+                device_authorized = True
+        finally:
+            if not device_authorized:
+                error_msg = "Telephone non autorise !"
+                error_name = "device_connecte"
+                raise exceptions.AuthenticationFailed(
+                    error_msg, error_name)
+            else:
+                data = super().validate(attrs)
+                refresh = self.get_token(self.user)
+                data['refresh'] = str(refresh)
+                data['access'] = str(refresh.access_token)
 
-        elif self.user.role == MyUser.EMPLOYE_AGENCE:
-            employe = Employee.objects.get(id=self.user.id)
-            agence = Agence.objects.get(employes__id=self.user.id)
-            data['agence'] = model_to_dict(agence)
-            data['agence']['last_date_cloture'] = data['agence']['last_date_cloture'].strftime(
-                "%d-%m-%Y %H:%M:%S") if data['agence']['last_date_cloture'] else data['agence']['last_date_cloture']
-            data.update(model_to_dict(employe, fields=['id', 'username', 'first_name', 'last_name',
-                                                       'role', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
-            data['last_login'] = data['last_login'].strftime(
-                "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
-            data['start_date'] = data['start_date'].strftime(
-                "%d-%m-%Y %H:%M:%S") if data['start_date'] else data['start_date']
+                # extra responses here
+                if self.user.role == MyUser.RESPONSABLE_AGENCE:
+                    responsable = Responsable.objects.get(id=self.user.id)
+                    agence = Agence.objects.get(responsable__id=self.user.id)
+                    data['agence'] = model_to_dict(agence)
+                    data['agence']['last_date_cloture'] = data['agence']['last_date_cloture'].strftime(
+                        "%d-%m-%Y %H:%M:%S") if data['agence']['last_date_cloture'] else data['agence']['last_date_cloture']
+                    # print(data['agence']['last_date_cloture'])
+                    data.update(model_to_dict(responsable, fields=['id', 'username', 'first_name', 'last_name',
+                                                                   'role', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
+                    data['last_login'] = data['last_login'].strftime(
+                        "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
+                    data['start_date'] = data['start_date'].strftime(
+                        "%d-%m-%Y %H:%M:%S") if data['start_date'] else data['start_date']
 
-        elif self.user.role == MyUser.AGENT_COMPENSATION:
-            agent = Agent.objects.get(id=self.user.id)
-            data.update(model_to_dict(agent, fields=['id', 'username', 'first_name', 'last_name',
-                                                     'role', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
-            data['last_login'] = data['last_login'].strftime(
-                "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
-            data['start_date'] = data['start_date'].strftime(
-                "%d-%m-%Y %H:%M:%S") if data['start_date'] else data['start_date']
+                elif self.user.role == MyUser.EMPLOYE_AGENCE:
+                    employe = Employee.objects.get(id=self.user.id)
+                    agence = Agence.objects.get(employes__id=self.user.id)
+                    data['agence'] = model_to_dict(agence)
+                    data['agence']['last_date_cloture'] = data['agence']['last_date_cloture'].strftime(
+                        "%d-%m-%Y %H:%M:%S") if data['agence']['last_date_cloture'] else data['agence']['last_date_cloture']
+                    data.update(model_to_dict(employe, fields=['id', 'username', 'first_name', 'last_name',
+                                                               'role', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
+                    data['last_login'] = data['last_login'].strftime(
+                        "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
+                    data['start_date'] = data['start_date'].strftime(
+                        "%d-%m-%Y %H:%M:%S") if data['start_date'] else data['start_date']
 
-        elif self.user.role == MyUser.SYSADMIN:
-            sysadmin = SysAdmin.objects.get(id=self.user.id)
-            data.update(model_to_dict(sysadmin, fields=['id', 'username', 'first_name', 'last_name',
-                                                        'role', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
-            data['last_login'] = data['last_login'].strftime(
-                "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
-            data['start_date'] = data['start_date'].strftime(
-                "%d-%m-%Y %H:%M:%S") if data['start_date'] else data['start_date']
+                elif self.user.role == MyUser.AGENT_COMPENSATION:
+                    agent = Agent.objects.get(id=self.user.id)
+                    data.update(model_to_dict(agent, fields=['id', 'username', 'first_name', 'last_name',
+                                                             'role', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
+                    data['last_login'] = data['last_login'].strftime(
+                        "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
+                    data['start_date'] = data['start_date'].strftime(
+                        "%d-%m-%Y %H:%M:%S") if data['start_date'] else data['start_date']
 
-        elif self.user.role == MyUser.VENDOR:
-            vendor = Vendor.objects.get(id=self.user.id)
-            data.update(model_to_dict(vendor, fields=['id', "myId", 'username', 'first_name', 'last_name',
-                                                      'role', 'tel', 'solde', "on_hold", 'client', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
-            data['last_login'] = data['last_login'].strftime(
-                "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
-            data['start_date'] = data['start_date'].strftime(
-                "%d-%m-%Y %H:%M:%S") if data['start_date'] else data['start_date']
+                elif self.user.role == MyUser.SYSADMIN:
+                    sysadmin = SysAdmin.objects.get(id=self.user.id)
+                    data.update(model_to_dict(sysadmin, fields=['id', 'username', 'first_name', 'last_name',
+                                                                'role', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
+                    data['last_login'] = data['last_login'].strftime(
+                        "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
+                    data['start_date'] = data['start_date'].strftime(
+                        "%d-%m-%Y %H:%M:%S") if data['start_date'] else data['start_date']
 
-        elif self.user.role == MyUser.CLIENT:
-            client = Client_DigiPay.objects.get(id=self.user.id)
-            data.update(model_to_dict(client, fields=['id', 'username', 'first_name', 'last_name',
-                                                      'role', 'tel', 'solde', "on_hold", 'client', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
-            data['last_login'] = data['last_login'].strftime(
-                "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
-            data['start_date'] = data['start_date'].strftime(
-                "%d-%m-%Y %H:%M:%S") if data['start_date'] else data['start_date']
-        return data
+                elif self.user.role == MyUser.VENDOR:
+                    vendor = Vendor.objects.get(id=self.user.id)
+                    data.update(model_to_dict(vendor, fields=['id', "myId", 'username', 'first_name', 'last_name',
+                                                              'role', 'tel', 'solde', "on_hold", 'client', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
+                    data['last_login'] = data['last_login'].strftime(
+                        "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
+                    data['start_date'] = data['start_date'].strftime(
+                        "%d-%m-%Y %H:%M:%S") if data['start_date'] else data['start_date']
+
+                elif self.user.role == MyUser.CLIENT:
+                    client = Client_DigiPay.objects.get(id=self.user.id)
+                    data.update(model_to_dict(client, fields=['id', 'username', 'first_name', 'last_name',
+                                                              'role', 'tel', 'solde', "on_hold", 'client', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
+                    data['last_login'] = data['last_login'].strftime(
+                        "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
+                    data['start_date'] = data['start_date'].strftime(
+                        "%d-%m-%Y %H:%M:%S") if data['start_date'] else data['start_date']
+
+                return data
 
 
 class ChangePasswordSerializer(serializers.Serializer):
     # update password user
     model = MyUser
-    """
-    Serializer for password change endpoint.
-    """
     old_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True)
 
@@ -344,11 +394,11 @@ class TransfertDirectFullSerializer(serializers.ModelSerializer):
         data = {}
         if instance.expediteur.role == MyUser.CLIENT:
             client = Client_DigiPay.objects.get(id=instance.expediteur.id)
-            data = ClientDigiPay_UserSerializer(client).data
+            data = CLientDigipay_ProfilSerializer(client).data
             return data
         elif instance.expediteur.role == MyUser.VENDOR:
             vendor = Vendor.objects.get(id=instance.expediteur.id)
-            data = Vendor_UserSerializer(vendor).data
+            data = Vendor_ProfilSerializer(vendor).data
             return data
         else:
             return instance.expediteur.id
@@ -357,11 +407,11 @@ class TransfertDirectFullSerializer(serializers.ModelSerializer):
         data = {}
         if instance.destinataire.role == MyUser.CLIENT:
             client = Client_DigiPay.objects.get(id=instance.destinataire.id)
-            data = ClientDigiPay_UserSerializer(client).data
+            data = CLientDigipay_ProfilSerializer(client).data
             return data
         elif instance.destinataire.role == MyUser.VENDOR:
             vendor = Vendor.objects.get(id=instance.destinataire.id)
-            data = Vendor_UserSerializer(vendor).data
+            data = Vendor_ProfilSerializer(vendor).data
             return data
         else:
             return instance.destinataire.id
@@ -379,14 +429,76 @@ class PreTransactionFullSerializer(serializers.ModelSerializer):
         data = {}
         if instance.expediteur.role == MyUser.CLIENT:
             client = Client_DigiPay.objects.get(id=instance.expediteur.id)
-            data = ClientDigiPay_UserSerializer(client).data
+            data = CLientDigipay_ProfilSerializer(client).data
             return data
         elif instance.expediteur.role == MyUser.VENDOR:
             vendor = Vendor.objects.get(id=instance.expediteur.id)
-            data = Vendor_UserSerializer(vendor).data
+            data = Vendor_ProfilSerializer(vendor).data
             return data
         else:
             return instance.expediteur.id
 
 
+# Cagnote Serialiser
+class CagnoteFullSerializer(serializers.ModelSerializer):
+    nbre_participants = serializers.IntegerField()
+    numero_cagnote = serializers.CharField()
+    responsable = UserSerializer()
+
+    class Meta:
+        model = Cagnote
+        fields = '__all__'
+
+
+class CagnoteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Cagnote
+        fields = '__all__'
+
+
+class Transfert_CagnoteFullSerializer(serializers.ModelSerializer):
+    expediteur = serializers.SerializerMethodField()
+    destinataire = serializers.SerializerMethodField()
+
+    def get_expediteur(self, instance):
+        data = {}
+        if instance.type_transaction == Transfert_Cagnote.DONATION:
+            client = Client_DigiPay.objects.get(id=instance.expediteur)
+            data = CLientDigipay_ProfilSerializer(client).data
+            return data
+        elif instance.type_transaction == Transfert_Cagnote.RECOLTE:
+            cagnote = Cagnote.objects.get(id=instance.expediteur)
+            data = CagnoteFullSerializer(cagnote).data
+            return data
+        else:
+            return instance.expediteur
+
+    def get_destinataire(self, instance):
+        data = {}
+        if instance.type_transaction == Transfert_Cagnote.RECOLTE:
+            client = Client_DigiPay.objects.get(id=instance.destinataire)
+            data = CLientDigipay_ProfilSerializer(client).data
+            return data
+        elif instance.type_transaction == Transfert_Cagnote.DONATION:
+            cagnote = Cagnote.objects.get(id=instance.destinataire)
+            data = CagnoteFullSerializer(cagnote).data
+            return data
+        else:
+            return instance.destinataire
+
+    class Meta:
+        model = Transfert_Cagnote
+        fields = '__all__'
+
+
+'''
+# Participation Cagnote Serialiser
+class ParticipationCagnoteFullSerializer(serializers.ModelSerializer):
+    participant = UserSerializer()
+    cagnote = CagnoteFullSerializer()
+
+    class Meta:
+        model = Participants_Cagnote
+        fields = '__all__'
+'''
 # todo List , Update , Get , change pwsd :  ( create : responsable ) , employee , agent

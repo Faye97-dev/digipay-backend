@@ -69,6 +69,28 @@ def confirmer_livraison_client(transactionId):
     return result
 
 
+def confirmer_livraison_vendor(transactionId):
+    transaction = Transaction.objects.get(id=transactionId)
+    transfert = Transfert_Direct.objects.get(id=transaction.transaction.id)
+    commercant = Vendor.objects.get(id=transfert.destinataire.id)
+    commercant_client = Vendor.objects.get(id=transfert.expediteur.id)
+
+    commercant_client.on_hold -= transfert.montant
+    commercant_client.save()
+
+    commercant.solde += transfert.montant
+    commercant.save()
+
+    transfert.status = Transfert.COMFIRMED
+    transfert.save()
+
+    result = TransactionFullSerializer(transaction).data
+    result['transaction'] = TransfertDirectFullSerializer(
+        transfert).data
+
+    return result
+
+
 def annuler_livraison_client(transactionId):
     transaction = Transaction.objects.get(id=transactionId)
     transfert = Transfert_Direct.objects.get(id=transaction.transaction.id)
@@ -88,16 +110,33 @@ def annuler_livraison_client(transactionId):
     return result
 
 
-def payement(commercant_client, pre_transactionId):
-    pre_transaction = Pre_Transaction.objects.get(id=pre_transactionId)
-    commercant = Vendor.objects.get(id=pre_transaction.expediteur.id)
+def annuler_livraison_vendor(transactionId):
+    transaction = Transaction.objects.get(id=transactionId)
+    transfert = Transfert_Direct.objects.get(id=transaction.transaction.id)
+    commercant_client = Vendor.objects.get(id=transfert.expediteur.id)
 
-    if commercant_client.solde >= pre_transaction.montant:
+    commercant_client.on_hold -= transfert.montant
+    commercant_client.solde += transfert.montant
+    commercant_client.save()
+
+    transfert.status = Transfert.CANCELED
+    transfert.save()
+
+    result = TransactionFullSerializer(transaction).data
+    result['transaction'] = TransfertDirectFullSerializer(
+        transfert).data
+
+    return result
+
+
+def fast_payement(commercant_client, commercant, montant, libele):
+    if commercant_client.solde >= montant:
         transfert = Transfert_Direct(
             expediteur=commercant_client,
             destinataire=commercant,
             status=TransactionModel.COMFIRMED,
-            montant=pre_transaction.montant)
+            montant=montant,
+            libele=libele)
         transfert.save()
 
         transaction = Transaction(
@@ -108,29 +147,115 @@ def payement(commercant_client, pre_transactionId):
         result['transaction'] = TransfertDirectFullSerializer(
             transfert).data
 
-        # notifications
-
+        '''
         msgClient = Notification(
             user=commercant_client, transaction=transfert, status=Notification.PAIEMENT,
-            message="Vous avez effectué un paiement de " + str(pre_transaction.montant) + " MRU au commerçant " + commercant.name + ' (' + commercant.tel+') avec le code confirmation: '+pre_transaction.code_secret)
+            message="Vous avez effectué un paiement de " + str(montant) + " MRU au commerçant " + commercant.name + ' (' + commercant.tel+')')
         msgClient.save()
 
         msgCommercant = Notification(
             user=commercant, transaction=transfert, status=Notification.PAIEMENT,
-            message="Vous avez reçu un paiement de " + str(pre_transaction.montant) + " MRU du client " + commercant_client.name + ' (' + commercant_client.tel+') avec le code confirmation: '+pre_transaction.code_secret)
+            message="Vous avez reçu un paiement de " + str(montant) + " MRU du commerçant " + commercant_client.name + ' (' + commercant_client.tel+')')
         msgCommercant.save()
+        '''
 
-        commercant_client.solde -= pre_transaction.montant
+        commercant_client.solde -= montant
         commercant_client.save()
 
-        commercant.solde += pre_transaction.montant
+        commercant.solde += montant
         commercant.save()
 
-        #pre_transaction.status = TransactionModel.COMFIRMED
-        # pre_transaction.save()
-        pre_transaction.delete()
-
         return result
+    else:
+        return {'msg': "Votre solde est insuffisant pour effectuer cette opération"}
+
+
+def payement(commercant_client, pre_transactionId):
+    pre_transaction = Pre_Transaction.objects.get(id=pre_transactionId)
+    commercant = Vendor.objects.get(id=pre_transaction.expediteur.id)
+
+    if commercant_client.solde >= pre_transaction.montant:
+        if not pre_transaction.livraison:
+            transfert = Transfert_Direct(
+                expediteur=commercant_client,
+                destinataire=commercant,
+                status=TransactionModel.COMFIRMED,
+                montant=pre_transaction.montant,
+                libele=pre_transaction.libele,
+                livraison=pre_transaction.livraison)
+            transfert.save()
+
+            transaction = Transaction(
+                transaction=transfert, type_transaction=Transaction.PAIEMENT, date=transfert.date_creation)
+            transaction.save()
+
+            result = TransactionFullSerializer(transaction).data
+            result['transaction'] = TransfertDirectFullSerializer(
+                transfert).data
+
+            # notifications
+            '''
+            msgClient = Notification(
+                user=commercant_client, transaction=transfert, status=Notification.PAIEMENT,
+                message="Vous avez effectué un paiement de " + str(pre_transaction.montant) + " MRU au commerçant " + commercant.name + ' (' + commercant.tel+') avec le code confirmation: '+pre_transaction.code_secret)
+            msgClient.save()
+
+            msgCommercant = Notification(
+                user=commercant, transaction=transfert, status=Notification.PAIEMENT,
+                message="Vous avez reçu un paiement de " + str(pre_transaction.montant) + " MRU du commerçant " + commercant_client.name + ' (' + commercant_client.tel+') avec le code confirmation: '+pre_transaction.code_secret)
+            msgCommercant.save()
+            '''
+
+            commercant_client.solde -= pre_transaction.montant
+            commercant_client.save()
+
+            commercant.solde += pre_transaction.montant
+            commercant.save()
+
+            pre_transaction.delete()
+            return result
+        else:
+            codes_list = [
+                item.code_secret for item in Pre_Transaction.objects.all()]
+            code_confirmation = random_code(4, codes_list)
+            transfert = Transfert_Direct(
+                expediteur=commercant_client,
+                destinataire=commercant,
+                status=TransactionModel.TO_VALIDATE,
+                montant=pre_transaction.montant,
+                libele=pre_transaction.libele,
+                delai_livraison=pre_transaction.delai_livraison,
+                livraison=pre_transaction.livraison,
+                code_secret=code_confirmation)
+            transfert.save()
+
+            transaction = Transaction(
+                transaction=transfert, type_transaction=Transaction.PAIEMENT, date=transfert.date_creation)
+            transaction.save()
+
+            result = TransactionFullSerializer(transaction).data
+            result['transaction'] = TransfertDirectFullSerializer(
+                transfert).data
+
+            # notifications
+            '''
+            msgClient = Notification(
+                user=commercant_client, transaction=transfert, status=Notification.PAIEMENT,
+                message="Vous avez effectué un paiement de " + str(pre_transaction.montant) + " MRU au commerçant " + commercant.name + ' (' + commercant.tel+'). Merci de fournir le code livraison '+transfert.code_secret)
+            msgClient.save()
+
+            msgCommercant = Notification(
+                user=commercant, transaction=transfert, status=Notification.PAIEMENT,
+                message="Vous avez reçu un paiement de " + str(pre_transaction.montant) + " MRU du commerçant " + commercant_client.name + ' (' + commercant_client.tel+') . Merci de confirmer la livraison')
+            msgCommercant.save()
+            '''
+
+            commercant_client.on_hold += pre_transaction.montant
+            commercant_client.solde -= pre_transaction.montant
+            commercant_client.save()
+
+            pre_transaction.delete()
+            return result
     else:
         return {'msg': "Votre solde est insuffisant pour effectuer cette opération"}
 
