@@ -1,9 +1,9 @@
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.http import JsonResponse, HttpResponse
-from .actions import retrait, payement, achat_credit, fast_payement, participer_cagnote, cloturer_cagnote
+from .actions import retrait, payement, achat_credit, fast_payement, participer_cagnote, cloturer_cagnote, update_participation_cagnote
 from api.models import *
 from users.models import Client_DigiPay, Vendor, MyUser, TransactionModel, Transfert, Transaction, Pre_Transaction, Transfert_Direct, Client, Cagnote, Participants_Cagnote
-from users.serializers import PreTransactionFullSerializer, Vendor_UserSerializer, CagnoteFullSerializer
+from users.serializers import PreTransactionFullSerializer, Vendor_UserSerializer, CagnoteFullSerializer, ParticipationCagnoteSerializer
 from api.serializers import TransfertFullSerializer
 from users.serializers import PreTransactionFullSerializer
 from rest_framework.decorators import api_view, permission_classes
@@ -205,6 +205,22 @@ def getCagnoteList(request):
 
 @api_view(['POST'])
 @permission_classes((IsAuthenticated,))
+def getParticipantsCagnote(request):
+    if request.method == 'POST':
+        data = json.loads(request.body.decode('utf-8'))
+        try:
+            cagnote = Cagnote.objects.get(id=data['cagnote'])
+            result = ParticipationCagnoteSerializer(
+                Participants_Cagnote.objects.filter(cagnote=cagnote).order_by('-date'), many=True).data
+            return JsonResponse(result, safe=False, status=200)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)
+
+
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
 def createCagnote(request):
     if request.method == 'POST':
         data = json.loads(request.body.decode('utf-8'))
@@ -264,6 +280,23 @@ def client_participer_cagnote(request):
             cagnote = Cagnote.objects.get(id=data['cagnote'])
             client = Client_DigiPay.objects.get(id=data['client'])
             result = participer_cagnote(client, cagnote, data['montant'])
+            return JsonResponse(result, safe=False, status=201)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)
+
+
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
+def client_update_participation_cagnote(request):
+    if request.method == 'POST':
+        data = json.loads(request.body.decode('utf-8'))
+        try:
+            cagnote = Cagnote.objects.get(id=data['cagnote'])
+            client = Client_DigiPay.objects.get(id=data['client'])
+            result = update_participation_cagnote(
+                client, cagnote, data['montant'])
             return JsonResponse(result, safe=False, status=201)
         except:
             return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)

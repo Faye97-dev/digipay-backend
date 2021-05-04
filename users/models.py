@@ -509,10 +509,10 @@ class Transfert_Direct(TransactionModel):
 
 
 class Transfert_Cagnote(TransactionModel):
-    DONATION = 'DONATION'
+    CAGNOTE = 'CAGNOTE'
     RECOLTE = 'RECOLTE'
     TYPES = [
-        (DONATION, 'DONATION'),
+        (CAGNOTE, 'CAGNOTE'),
         (RECOLTE, 'RECOLTE'),
     ]
     expediteur = models.IntegerField()
@@ -572,7 +572,7 @@ class Transaction(models.Model):
     PAIEMENT = '06'
     ENVOI = '07'
     REMBOURSEMENT = '08'
-    DONATION = '09'
+    CAGNOTE = '09'
     RECOLTE = '10'
     TYPES = [
         (TRANSFERT, 'TRANSFERT'),
@@ -586,7 +586,7 @@ class Transaction(models.Model):
         (ENVOI, 'ENVOI'),
         (REMBOURSEMENT, 'REMBOURSEMENT'),
         ###
-        (DONATION, 'DONATION'),
+        (CAGNOTE, 'CAGNOTE'),
         (RECOLTE, 'RECOLTE'),
 
     ]

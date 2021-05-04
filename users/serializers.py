@@ -462,7 +462,7 @@ class Transfert_CagnoteFullSerializer(serializers.ModelSerializer):
 
     def get_expediteur(self, instance):
         data = {}
-        if instance.type_transaction == Transfert_Cagnote.DONATION:
+        if instance.type_transaction == Transfert_Cagnote.CAGNOTE:
             client = Client_DigiPay.objects.get(id=instance.expediteur)
             data = CLientDigipay_ProfilSerializer(client).data
             return data
@@ -479,7 +479,7 @@ class Transfert_CagnoteFullSerializer(serializers.ModelSerializer):
             client = Client_DigiPay.objects.get(id=instance.destinataire)
             data = CLientDigipay_ProfilSerializer(client).data
             return data
-        elif instance.type_transaction == Transfert_Cagnote.DONATION:
+        elif instance.type_transaction == Transfert_Cagnote.CAGNOTE:
             cagnote = Cagnote.objects.get(id=instance.destinataire)
             data = CagnoteFullSerializer(cagnote).data
             return data
@@ -488,6 +488,14 @@ class Transfert_CagnoteFullSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Transfert_Cagnote
+        fields = '__all__'
+
+
+class ParticipationCagnoteSerializer(serializers.ModelSerializer):
+    participant = UserSerializer()
+
+    class Meta:
+        model = Participants_Cagnote
         fields = '__all__'
 
 

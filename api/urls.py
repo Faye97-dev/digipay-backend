@@ -73,7 +73,10 @@ urlpatterns = [
     path('func/client_digiPay/achat-credit/', client_achat_credit),
     path('func/client_digiPay/valid-cagnote-code/', check_cagnote_byId),
     path('func/client_digiPay/participer-cagnote/', client_participer_cagnote),
+    path('func/client_digiPay/update-participation/',
+         client_update_participation_cagnote),
     path('func/client_digiPay/cloturer-cagnote/', client_cloturer_cagnote),
+    path('func/client_digiPay/participants-cagnote/', getParticipantsCagnote),
 
     # Digipay vendor
     path('func/vendor/gen-code-payement/', random_code_payement),

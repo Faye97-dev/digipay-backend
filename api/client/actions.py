@@ -228,14 +228,14 @@ def participer_cagnote(client, cagnote, montant):
         transfert = Transfert_Cagnote(
             expediteur=client.id,
             destinataire=cagnote.id,
-            type_transaction=Transfert_Cagnote.DONATION,
+            type_transaction=Transfert_Cagnote.CAGNOTE,
             status=TransactionModel.COMFIRMED,
             montant=montant,
         )
         transfert.save()
 
         transaction = Transaction(
-            transaction=transfert, type_transaction=Transaction.DONATION, date=transfert.date_creation)
+            transaction=transfert, type_transaction=Transaction.CAGNOTE, date=transfert.date_creation)
         transaction.save()
 
         client.solde -= montant
@@ -243,6 +243,42 @@ def participer_cagnote(client, cagnote, montant):
 
         cagnote.solde += montant
         cagnote.save()
+
+        result = {}
+        result['cagnote'] = CagnoteFullSerializer(cagnote).data
+        result['participation'] = {
+            'montant': participation.montant, 'date': participation.date.strftime('%d-%m-%Y %H:%M:%S')}
+
+        return result
+    else:
+        return {'msg': "Votre solde est insuffisant pour effectuer cette opération"}
+
+
+def update_participation_cagnote(client, cagnote, montant):
+    if client.solde >= montant:
+        participation = Participants_Cagnote.objects.filter(
+            participant=client, cagnote=cagnote)
+        transfert = Transfert_Cagnote.objects.filter(
+            expediteur=client.id, destinataire=cagnote.id)
+
+        if len(participation) == 0 or len(transfert) == 0:
+            return {'msg': "Pas de participation fait par ce compte utilisateur !"}
+        participation = participation[0]
+        transfert = transfert[0]
+
+        client.solde += participation.montant
+        client.solde -= montant
+        client.save()
+
+        cagnote.solde -= participation.montant
+        cagnote.solde += montant
+        cagnote.save()
+
+        transfert.montant = montant
+        transfert.save()
+
+        participation.montant = montant
+        participation.save()
 
         result = {}
         result['cagnote'] = CagnoteFullSerializer(cagnote).data

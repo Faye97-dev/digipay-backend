@@ -194,7 +194,7 @@ class TransactionListAPIViews(generics.ListAPIView):
                 d['transaction'] = TransfertDirectFullSerializer(
                     transfert).data
                 data.append(d)
-            elif d['type_transaction'] in [Transaction.DONATION, Transaction.RECOLTE]:
+            elif d['type_transaction'] in [Transaction.CAGNOTE, Transaction.RECOLTE]:
                 transfert = Transfert_Cagnote.objects.get(
                     id=d['transaction'])
                 d['transaction'] = Transfert_CagnoteFullSerializer(
