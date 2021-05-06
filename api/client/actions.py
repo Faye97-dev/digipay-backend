@@ -168,6 +168,33 @@ def payement(client, pre_transactionId):
         return {'msg': "Votre solde est insuffisant pour effectuer cette opération"}
 
 
+def payement_masse(entreprise, clients, total):
+    if entreprise.solde >= total:
+        numero_grp_payement = str(uuid.uuid4().hex.upper())
+        for client in clients:
+            transfert = Transfert_Direct(
+                expediteur=entreprise,
+                destinataire=client['user'],
+                status=TransactionModel.COMFIRMED,
+                montant=client["montant"],
+                numero_grp_payement=numero_grp_payement)
+            transfert.save()
+
+            transaction = Transaction(
+                transaction=transfert, type_transaction=Transaction.PAIEMENT_MASSE, date=transfert.date_creation)
+            transaction.save()
+
+            client['user'].solde += transfert.montant
+            client['user'].save()
+
+            entreprise.solde -= transfert.montant
+
+        entreprise.save()
+        return {'transaction': "Opération réussie !"}
+    else:
+        return {'msg': "Votre solde est insuffisant pour effectuer cette opération"}
+
+
 def achat_credit(client, numero, montant):
     # digipay commercant credit recharge
     commercant = list(Vendor.objects.filter(tel='11223344'))

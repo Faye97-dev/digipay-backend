@@ -39,6 +39,21 @@ urlpatterns = [
 
     path('cagnote/create/', createCagnote),
     path('cagnote/list/', getCagnoteList),
+
+    path('grp-payement/list/', Grp_PayementListAPIViews.as_view()),
+    path('grp-payement/create/', Grp_PayementCreateAPIViews.as_view()),
+    path('grp-payement/delete/<int:pk>/', Grp_PayementDeleteAPIViews.as_view()),
+    path('grp-payement/check-client_digipay/',
+         check_clientDigiPay_grpPayement),
+
+    path('beneficiaire-grp_payement/list/', getBeneficiares_grpPayement),
+    path('beneficiaire-grp_payement/create/',
+         client_add_beneficiaire_grpPayement),
+    path('beneficiaire-grp_payement/update/<int:pk>/',
+         client_update_beneficiaire_grpPayement),
+    path('beneficiaire-grp_payement/delete/<int:pk>/',
+         client_delete_beneficiaire_grpPayement),
+
     ###
     #path('func/transfert/add/', add_transfert),
     #path('func/transfert/error/', error_transfert),
@@ -77,6 +92,8 @@ urlpatterns = [
          client_update_participation_cagnote),
     path('func/client_digiPay/cloturer-cagnote/', client_cloturer_cagnote),
     path('func/client_digiPay/participants-cagnote/', getParticipantsCagnote),
+    path('func/client_digiPay/payement-masse/', client_payement_masse),
+
 
     # Digipay vendor
     path('func/vendor/gen-code-payement/', random_code_payement),

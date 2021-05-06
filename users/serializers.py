@@ -2,7 +2,7 @@ from django.forms.models import model_to_dict
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework import serializers, exceptions
 from users.models import MyUser, Agent, Employee, Responsable, Compensation, Client_DigiPay, Client, Vendor, Transfert_Direct, Pre_Transaction, SysAdmin
-from users.models import Cagnote, Participants_Cagnote, Transfert_Cagnote
+from users.models import Cagnote, Participants_Cagnote, Transfert_Cagnote, Group_Payement, Beneficiares_GrpPayement
 from api.models import Agence
 from api.serializers import AgenceSerializer, AgenceFullSerializer
 from .service import random_with_N_digits
@@ -149,7 +149,7 @@ class ClientDigiPay_UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Client_DigiPay
-        fields = ('id', 'device_connecte', 'username', 'first_name', 'last_name',
+        fields = ('id', 'device_connecte', 'premium', 'username', 'first_name', 'last_name',
                   'role', 'password', 'tel', 'email', 'adresse', 'solde', "on_hold", 'client', 'start_date', 'is_active', 'last_login')
         extra_kwargs = {'password': {'write_only': True}, 'device_connecte': {'write_only': True},
                         'id': {'read_only': True}, 'start_date': {'read_only': True}, 'last_login': {'read_only': True}}
@@ -343,7 +343,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
                 elif self.user.role == MyUser.CLIENT:
                     client = Client_DigiPay.objects.get(id=self.user.id)
-                    data.update(model_to_dict(client, fields=['id', 'username', 'first_name', 'last_name',
+                    data.update(model_to_dict(client, fields=['id', 'username', 'premium', 'first_name', 'last_name',
                                                               'role', 'tel', 'solde', "on_hold", 'client', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
                     data['last_login'] = data['last_login'].strftime(
                         "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
@@ -496,6 +496,43 @@ class ParticipationCagnoteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Participants_Cagnote
+        fields = '__all__'
+
+# Group payement
+
+
+class Grp_PayementFullSerializer(serializers.ModelSerializer):
+    nbre_beneficiaires = serializers.IntegerField()
+    total_montant = serializers.FloatField()
+    responsable = UserSerializer()
+
+    class Meta:
+        model = Group_Payement
+        fields = '__all__'
+
+
+class Grp_PayementSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Group_Payement
+        fields = '__all__'
+
+# Beneficiaire grp payement
+
+
+class Beneficiares_GrpPayementFullSerializer(serializers.ModelSerializer):
+    beneficiaire = UserSerializer()
+    grp_payement = Grp_PayementFullSerializer()
+
+    class Meta:
+        model = Beneficiares_GrpPayement
+        fields = '__all__'
+
+
+class Beneficiares_GrpPayementSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Beneficiares_GrpPayement
         fields = '__all__'
 
 

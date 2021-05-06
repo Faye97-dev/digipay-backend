@@ -1,9 +1,9 @@
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.http import JsonResponse, HttpResponse
-from .actions import retrait, payement, achat_credit, fast_payement, participer_cagnote, cloturer_cagnote, update_participation_cagnote
+from .actions import retrait, payement, achat_credit, fast_payement, participer_cagnote, cloturer_cagnote, update_participation_cagnote, payement_masse
 from api.models import *
-from users.models import Client_DigiPay, Vendor, MyUser, TransactionModel, Transfert, Transaction, Pre_Transaction, Transfert_Direct, Client, Cagnote, Participants_Cagnote
-from users.serializers import PreTransactionFullSerializer, Vendor_UserSerializer, CagnoteFullSerializer, ParticipationCagnoteSerializer
+from users.models import Client_DigiPay, Vendor, MyUser, TransactionModel, Transfert, Transaction, Pre_Transaction, Transfert_Direct, Client, Cagnote, Participants_Cagnote, Group_Payement, Beneficiares_GrpPayement
+from users.serializers import PreTransactionFullSerializer, Vendor_UserSerializer, CagnoteFullSerializer, ParticipationCagnoteSerializer, Beneficiares_GrpPayementFullSerializer, CLientDigipay_ProfilSerializer, Grp_PayementFullSerializer
 from api.serializers import TransfertFullSerializer
 from users.serializers import PreTransactionFullSerializer
 from rest_framework.decorators import api_view, permission_classes
@@ -314,6 +314,132 @@ def client_cloturer_cagnote(request):
             client = Client_DigiPay.objects.get(id=data['client'])
             result = cloturer_cagnote(client, cagnote)
             return JsonResponse(result, safe=False, status=201)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)
+
+
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
+def getBeneficiares_grpPayement(request):
+    if request.method == 'POST':
+        data = json.loads(request.body.decode('utf-8'))
+        try:
+            grp_payement = Group_Payement.objects.get(id=data['grp_payement'])
+            result = Beneficiares_GrpPayementFullSerializer(
+                Beneficiares_GrpPayement.objects.filter(grp_payement=grp_payement).order_by('-date'), many=True).data
+            return JsonResponse(result, safe=False, status=200)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)
+
+
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
+def check_clientDigiPay_grpPayement(request):
+    if request.method == 'POST':
+        data = json.loads(request.body.decode('utf-8'))
+        try:
+            client = list(Client_DigiPay.objects.filter(tel=data['tel']))
+            if len(client) == 0:
+                result = {
+                    'msg': "Aucun client digiPay n'est associe a ce numero de telephone !  "}
+                return JsonResponse(result, safe=False, status=200)
+
+            result = CLientDigipay_ProfilSerializer(client[0]).data
+            if not result.active:
+                result = {'msg': "ce client digiPay n'est plus active !  "}
+                return JsonResponse(result, safe=False, status=200)
+            else:
+                return JsonResponse(result, safe=False, status=200)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)
+
+
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
+def client_add_beneficiaire_grpPayement(request):
+    if request.method == 'POST':
+        data = json.loads(request.body.decode('utf-8'))
+        try:
+            client = Client_DigiPay.objects.get(id=data['beneficiaire'])
+            grp_payement = Group_Payement.objects.get(id=data['grp_payement'])
+            beneficiaire = Beneficiares_GrpPayement(
+                beneficiaire=client, grp_payement=grp_payement, montant=data['montant'], motif=data['motif'])
+            beneficiaire.save()
+
+            result = [Beneficiares_GrpPayementFullSerializer(
+                beneficiaire).data, Grp_PayementFullSerializer(grp_payement).data]
+            return JsonResponse(result, safe=False, status=200)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)
+
+
+@api_view(['PUT'])
+@permission_classes((IsAuthenticated,))
+def client_update_beneficiaire_grpPayement(request, pk):
+    if request.method == 'PUT':
+        data = json.loads(request.body.decode('utf-8'))
+        try:
+            beneficiaire = Beneficiares_GrpPayement.objects.get(id=pk)
+            beneficiaire.montant = data['montant']
+            beneficiaire.motif = data['motif']
+            beneficiaire.save()
+
+            grp_payement = Group_Payement.objects.get(id=data['grp_payement'])
+
+            result = [Beneficiares_GrpPayementFullSerializer(
+                beneficiaire).data, Grp_PayementFullSerializer(grp_payement).data]
+
+            return JsonResponse(result, safe=False, status=200)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)
+
+
+@api_view(['DELETE'])
+@permission_classes((IsAuthenticated,))
+def client_delete_beneficiaire_grpPayement(request, pk):
+    if request.method == 'DELETE':
+        data = json.loads(request.body.decode('utf-8'))
+        try:
+            beneficiaire = Beneficiares_GrpPayement.objects.get(id=pk)
+            beneficiaire.delete()
+
+            grp_payement = Group_Payement.objects.get(id=data['grp_payement'])
+
+            result = [None, Grp_PayementFullSerializer(grp_payement).data]
+            return JsonResponse(result, safe=False, status=200)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)
+
+
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
+def client_payement_masse(request):
+    if request.method == 'POST':
+        data = json.loads(request.body.decode('utf-8'))
+        try:
+            destinataires = []
+            for destinataire in data["destinataires"]:
+                temp = {'user': Client_DigiPay.objects.get(
+                    destinataire['user']), 'montant': destinataire['montant']}
+                destinataires.append(temp)
+
+            entreprise = Client_DigiPay.objects.get(data['expediteur'])
+
+            result = payement_masse(entreprise, destinataires, data['total'])
+
+            return JsonResponse(result, safe=False, status=200)
         except:
             return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
     else:

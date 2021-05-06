@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import MyUser, Responsable, Agent, Employee, Agent, Transaction, Transfert, Compensation, Client, Client_DigiPay, Vendor, Notification, Transfert_Direct, Pre_Transaction
-from .models import Cagnote, Participants_Cagnote, Transfert_Cagnote
+from .models import Cagnote, Participants_Cagnote, Transfert_Cagnote, Group_Payement, Beneficiares_GrpPayement
 from api.models import Agence, Commune
 # Register your models here.
 admin.site.register(MyUser)
@@ -25,3 +25,6 @@ admin.site.register(Transfert_Direct)
 admin.site.register(Cagnote)
 admin.site.register(Participants_Cagnote)
 admin.site.register(Transfert_Cagnote)
+
+admin.site.register(Group_Payement)
+admin.site.register(Beneficiares_GrpPayement)

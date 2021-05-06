@@ -7,8 +7,8 @@ from rest_framework import status, generics, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .serializers import *
-from users.serializers import CompensationFullSerializer, TransfertDirectFullSerializer, CagnoteSerializer, Transfert_CagnoteFullSerializer
-from users.models import Transfert
+from users.serializers import CompensationFullSerializer, TransfertDirectFullSerializer, CagnoteSerializer, Transfert_CagnoteFullSerializer, Grp_PayementFullSerializer, Grp_PayementSerializer, Beneficiares_GrpPayementSerializer, Beneficiares_GrpPayementFullSerializer
+from users.models import Transfert, Group_Payement, Beneficiares_GrpPayement
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import *
 from users.models import MyUser, Responsable, Employee, Client_DigiPay, Vendor, Transfert_Direct, Notification, Agent, Participants_Cagnote, Cagnote, Transfert_Cagnote
@@ -257,6 +257,41 @@ class TransactionCreateAPIViews(generics.CreateAPIView):
     serializer_class = TransactionSerializer
     permission_classes = [IsAuthenticated]
     queryset = Transaction.objects.all()
+
+
+# group payement views
+class Grp_PayementListAPIViews(generics.ListAPIView):
+    serializer_class = Grp_PayementFullSerializer
+    permission_classes = [IsAuthenticated]
+    #queryset = Group_Payement.objects.all().order_by('-date')
+
+    def get_queryset(self):
+        if self.request.user.role == MyUser.CLIENT:
+            res = Group_Payement.objects.filter(
+                responsable=self.request.user).order_by('-date')
+            return res
+        else:
+            return []
+
+
+class Grp_PayementCreateAPIViews(generics.CreateAPIView):
+    serializer_class = Grp_PayementSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = Group_Payement.objects.all()
+
+    def create(self, request, *args, **kwargs):
+        response = super(Grp_PayementCreateAPIViews,
+                         self).create(request, *args, **kwargs)
+        response.status = status.HTTP_200_OK
+        temp = Group_Payement.objects.get(id=response.data['id'])
+        response.data = Grp_PayementFullSerializer(temp).data
+        return response
+
+
+class Grp_PayementDeleteAPIViews(generics.DestroyAPIView):
+    serializer_class = Grp_PayementSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = Group_Payement.objects.all()
 
 
 '''

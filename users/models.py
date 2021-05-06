@@ -8,7 +8,7 @@ from api.models import Agence, Commune
 import uuid
 from rest_framework import serializers
 from .service import random_code
-
+from django.db.models import Sum, Q
 # users models #
 
 
@@ -178,6 +178,7 @@ class Client_DigiPay(MyUser, PermissionsMixin):
         max_length=70, null=True, unique=True)
     device_connecte = models.CharField(
         max_length=70, null=True, unique=True)
+    premium = models.BooleanField(default=False)
 
     @property
     def name(self):
@@ -325,10 +326,39 @@ class Participants_Cagnote(models.Model):
     cagnote = models.ForeignKey(Cagnote, on_delete=models.CASCADE)
     participant = models.ForeignKey(MyUser, on_delete=models.CASCADE)
     montant = models.FloatField(default=0.0)
+    motif = models.CharField(max_length=200, blank=True, null=True)
     date = models.DateTimeField(auto_now_add=True, null=True)
 
     class Meta:
         db_table = "participant_cagnote"
+
+
+class Group_Payement(models.Model):
+    nom = models.CharField(max_length=100)
+    responsable = models.ForeignKey(MyUser, on_delete=models.CASCADE)
+    date = models.DateTimeField(auto_now_add=True, null=True)
+
+    @property
+    def nbre_beneficiaires(self):
+        return len(Beneficiares_GrpPayement.objects.filter(grp_payement=self))
+
+    @property
+    def total_montant(self):
+        return Beneficiares_GrpPayement.objects.filter(grp_payement=self).aggregate(Sum('montant'))['montant__sum'] or 0
+
+    class Meta:
+        db_table = "group_payement"
+
+
+class Beneficiares_GrpPayement(models.Model):
+    grp_payement = models.ForeignKey(Group_Payement, on_delete=models.CASCADE)
+    beneficiaire = models.ForeignKey(MyUser, on_delete=models.CASCADE)
+    montant = models.FloatField(default=0.0)
+    motif = models.CharField(max_length=200, blank=True, null=True)
+    date = models.DateTimeField(auto_now_add=True, null=True)
+
+    class Meta:
+        db_table = "beneficiaires_group_payement"
 
 
 class TransactionModel(models.Model):
@@ -503,6 +533,8 @@ class Transfert_Direct(TransactionModel):
     delai_livraison = models.IntegerField(null=True)
     libele = models.TextField(blank=True, null=True, default='')
     livraison = models.BooleanField(default=False)
+    numero_grp_payement = models.CharField(
+        max_length=100, null=True, blank=True)
 
     class Meta:
         db_table = "transfert_direct"
@@ -574,6 +606,7 @@ class Transaction(models.Model):
     REMBOURSEMENT = '08'
     CAGNOTE = '09'
     RECOLTE = '10'
+    PAIEMENT_MASSE = '11'
     TYPES = [
         (TRANSFERT, 'TRANSFERT'),
         (RETRAIT, 'RETRAIT'),
@@ -585,6 +618,7 @@ class Transaction(models.Model):
         (PAIEMENT, 'PAIEMENT'),
         (ENVOI, 'ENVOI'),
         (REMBOURSEMENT, 'REMBOURSEMENT'),
+        (PAIEMENT_MASSE, 'PAIEMENT_MASSE'),
         ###
         (CAGNOTE, 'CAGNOTE'),
         (RECOLTE, 'RECOLTE'),
