@@ -348,12 +348,19 @@ def check_clientDigiPay_grpPayement(request):
                     'msg': "Aucun client digiPay n'est associe a ce numero de telephone !  "}
                 return JsonResponse(result, safe=False, status=200)
 
-            result = CLientDigipay_ProfilSerializer(client[0]).data
-            if not result.active:
+            client = client[0]
+            print(client)
+            if not client.is_active:
                 result = {'msg': "ce client digiPay n'est plus active !  "}
                 return JsonResponse(result, safe=False, status=200)
-            else:
+
+            if client.id == data['user']:
+                result = {
+                    'msg': "ce numero de telephone est associe a votre compte !  "}
                 return JsonResponse(result, safe=False, status=200)
+
+            result = CLientDigipay_ProfilSerializer(client).data
+            return JsonResponse(result, safe=False, status=200)
         except:
             return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
     else:
@@ -368,6 +375,14 @@ def client_add_beneficiaire_grpPayement(request):
         try:
             client = Client_DigiPay.objects.get(id=data['beneficiaire'])
             grp_payement = Group_Payement.objects.get(id=data['grp_payement'])
+
+            existant_beneficiaire = Beneficiares_GrpPayement.objects.filter(
+                beneficiaire=client, grp_payement=grp_payement)
+            if(len(existant_beneficiaire) != 0):
+                result = {
+                    'msg': "ce client est deja existant dans ce groupe !  "}
+                return JsonResponse(result, safe=False, status=200)
+
             beneficiaire = Beneficiares_GrpPayement(
                 beneficiaire=client, grp_payement=grp_payement, montant=data['montant'], motif=data['motif'])
             beneficiaire.save()
@@ -408,14 +423,17 @@ def client_update_beneficiaire_grpPayement(request, pk):
 @permission_classes((IsAuthenticated,))
 def client_delete_beneficiaire_grpPayement(request, pk):
     if request.method == 'DELETE':
-        data = json.loads(request.body.decode('utf-8'))
         try:
             beneficiaire = Beneficiares_GrpPayement.objects.get(id=pk)
+            grp_payement = Group_Payement.objects.get(
+                id=beneficiaire.grp_payement.id)
+
+            result = [Beneficiares_GrpPayementFullSerializer(
+                beneficiaire).data]
+
             beneficiaire.delete()
 
-            grp_payement = Group_Payement.objects.get(id=data['grp_payement'])
-
-            result = [None, Grp_PayementFullSerializer(grp_payement).data]
+            result.append(Grp_PayementFullSerializer(grp_payement).data)
             return JsonResponse(result, safe=False, status=200)
         except:
             return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
@@ -429,13 +447,16 @@ def client_payement_masse(request):
     if request.method == 'POST':
         data = json.loads(request.body.decode('utf-8'))
         try:
+            grp_payement = Group_Payement.objects.get(id=data['grp_payement'])
+            beneficiaires = Beneficiares_GrpPayement.objects.filter(
+                grp_payement=grp_payement)
+
             destinataires = []
-            for destinataire in data["destinataires"]:
-                temp = {'user': Client_DigiPay.objects.get(
-                    destinataire['user']), 'montant': destinataire['montant']}
+            for b in beneficiaires:
+                temp = {'user': Client_DigiPay.objects.get(id=b.beneficiaire.id) , 'montant': b.montant}
                 destinataires.append(temp)
 
-            entreprise = Client_DigiPay.objects.get(data['expediteur'])
+            entreprise = Client_DigiPay.objects.get(id=data['expediteur'])
 
             result = payement_masse(entreprise, destinataires, data['total'])
 
