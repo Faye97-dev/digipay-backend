@@ -167,6 +167,8 @@ class Responsable(MyUser, PermissionsMixin):
 
 
 class Client_DigiPay(MyUser, PermissionsMixin):
+    date_naissance = models.CharField(max_length=50, blank=True, null=True)
+    identifiant = models.CharField(max_length=15, null=True, unique=True)
     tel = models.CharField(max_length=50, blank=True, unique=True)
     email = models.EmailField(null=True, blank=True)
     adresse = models.CharField(max_length=100, null=True, blank=True)
@@ -302,7 +304,10 @@ class Cloture(models.Model):
 
 class Cagnote(models.Model):
     nom = models.CharField(max_length=100)
-    responsable = models.ForeignKey(MyUser, on_delete=models.CASCADE)
+    responsable = models.ForeignKey(
+        MyUser, on_delete=models.CASCADE, related_name='responsable_cagnote')
+    beneficiaire = models.ForeignKey(
+        MyUser, on_delete=models.CASCADE, related_name='beneficiaire_cagnote')
     solde = models.FloatField(default=0.0)
     objectif = models.FloatField(default=0.0)
     motif = models.CharField(max_length=200, blank=True, null=True)
@@ -337,6 +342,7 @@ class Group_Payement(models.Model):
     nom = models.CharField(max_length=100)
     responsable = models.ForeignKey(MyUser, on_delete=models.CASCADE)
     date = models.DateTimeField(auto_now_add=True, null=True)
+    motif = models.CharField(max_length=200, blank=True, null=True)
 
     @property
     def nbre_beneficiaires(self):
@@ -398,6 +404,10 @@ class Compensation(TransactionModel):
         Agent, related_name="compensations", on_delete=models.CASCADE)
     agence = models.ForeignKey(
         Agence, related_name="compensations", on_delete=models.CASCADE)
+
+    frais_origine = models.FloatField(default=0.0)
+    frais_destination = models.FloatField(default=0.0)
+    frais_societe = models.FloatField(default=0.0)
 
     class Meta:
         db_table = "compensation"
@@ -530,6 +540,10 @@ class Transfert_Direct(TransactionModel):
         MyUser, related_name='transferts_direct_recus', on_delete=models.CASCADE)
     code_secret = models.CharField(max_length=200, blank=True, default='')
 
+    frais_origine = models.FloatField(default=0.0)
+    frais_destination = models.FloatField(default=0.0)
+    frais_societe = models.FloatField(default=0.0)
+
     delai_livraison = models.IntegerField(null=True)
     libele = models.TextField(blank=True, null=True, default='')
     livraison = models.BooleanField(default=False)
@@ -550,6 +564,10 @@ class Transfert_Cagnote(TransactionModel):
     expediteur = models.IntegerField()
     destinataire = models.IntegerField()
     type_transaction = models.CharField(max_length=30, choices=TYPES,)
+
+    frais_origine = models.FloatField(default=0.0)
+    frais_destination = models.FloatField(default=0.0)
+    frais_societe = models.FloatField(default=0.0)
 
     class Meta:
         db_table = "transfert_cagnote"

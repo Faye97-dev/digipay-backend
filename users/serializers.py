@@ -444,6 +444,7 @@ class CagnoteFullSerializer(serializers.ModelSerializer):
     nbre_participants = serializers.IntegerField()
     numero_cagnote = serializers.CharField()
     responsable = UserSerializer()
+    beneficiaire = UserSerializer()
 
     class Meta:
         model = Cagnote

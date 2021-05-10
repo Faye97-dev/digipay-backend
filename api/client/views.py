@@ -5,7 +5,7 @@ from api.models import *
 from users.models import Client_DigiPay, Vendor, MyUser, TransactionModel, Transfert, Transaction, Pre_Transaction, Transfert_Direct, Client, Cagnote, Participants_Cagnote, Group_Payement, Beneficiares_GrpPayement
 from users.serializers import PreTransactionFullSerializer, Vendor_UserSerializer, CagnoteFullSerializer, ParticipationCagnoteSerializer, Beneficiares_GrpPayementFullSerializer, CLientDigipay_ProfilSerializer, Grp_PayementFullSerializer
 from api.serializers import TransfertFullSerializer
-from users.serializers import PreTransactionFullSerializer
+from users.serializers import PreTransactionFullSerializer, TransfertDirectFullSerializer
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from api.service import participationCagnoteListByUser
@@ -221,14 +221,52 @@ def getParticipantsCagnote(request):
 
 @api_view(['POST'])
 @permission_classes((IsAuthenticated,))
+def check_clientDigiPay_newCagnote(request):
+    if request.method == 'POST':
+        data = json.loads(request.body.decode('utf-8'))
+        try:
+            client = list(Client_DigiPay.objects.filter(tel=data['tel']))
+            if len(client) == 0:
+                result = {
+                    'msg': "Aucun client digiPay n'est associe a ce numero de telephone !  "}
+                return JsonResponse(result, safe=False, status=200)
+
+            client = client[0]
+            if not client.is_active:
+                result = {'msg': "ce client digiPay n'est plus active !  "}
+                return JsonResponse(result, safe=False, status=200)
+
+            '''if client.id == data['user']:
+                result = {
+                    'msg': "ce numero de telephone est associe a votre compte , Desactiver le switch !  "}
+                return JsonResponse(result, safe=False, status=200)'''
+
+            result = CLientDigipay_ProfilSerializer(client).data
+            return JsonResponse(result, safe=False, status=200)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)
+
+
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
 def createCagnote(request):
     if request.method == 'POST':
         data = json.loads(request.body.decode('utf-8'))
         try:
-            client = Client_DigiPay.objects.get(id=data['client'])
-            cagnote = Cagnote(
-                nom=data['nom'], objectif=data['objectif'], motif=data['motif'], responsable=client)
-            cagnote.save()
+            if not data['choix_beneficiaire']:
+                client = Client_DigiPay.objects.get(id=data['client'])
+                cagnote = Cagnote(
+                    nom=data['nom'], objectif=data['objectif'], motif=data['motif'], responsable=client, beneficiaire=client)
+                cagnote.save()
+            else:
+                client = Client_DigiPay.objects.get(id=data['client'])
+                beneficiaire = Client_DigiPay.objects.get(
+                    id=data['beneficiaire'])
+                cagnote = Cagnote(
+                    nom=data['nom'], objectif=data['objectif'], motif=data['motif'], responsable=client, beneficiaire=beneficiaire)
+                cagnote.save()
 
             result = {}
             result['cagnote'] = CagnoteFullSerializer(cagnote).data
@@ -253,18 +291,20 @@ def check_cagnote_byId(request):
             if len(cagnote) != 0:
                 result = CagnoteFullSerializer(cagnote[0]).data
                 if not result["actif"]:
-                    return JsonResponse({'msg': " Cette cagnote n'est plus actif !"}, safe=False, status=200)
+                    return JsonResponse({'msg': " Cette cagnotte n'est plus actif !"}, safe=False, status=200)
                 elif result["responsable"]['id'] == user.id:
-                    return JsonResponse({'msg': " Vous etes responsable de cette cagnote , pour faire un don aller vers la liste des cagnotes !"}, safe=False, status=200)
+                    return JsonResponse({'msg': " Vous etes responsable de cette cagnotte , pour faire un don aller vers la liste des cagnottes !"}, safe=False, status=200)
+                elif result["beneficiaire"]['id'] == user.id:
+                    return JsonResponse({'msg': " Vous etes le beneficiaire de cette cagnotte !"}, safe=False, status=200)
                 else:
                     participants = Participants_Cagnote.objects.filter(
                         cagnote=cagnote[0], participant=user)
                     if len(list(participants)) != 0:
-                        return JsonResponse({'msg': " Vous etes deja paticipant a cette cagnote !"}, safe=False, status=200)
+                        return JsonResponse({'msg': " Vous etes deja paticipant a cette cagnotte !"}, safe=False, status=200)
                     else:
                         return JsonResponse(result, safe=False, status=200)
             else:
-                return JsonResponse({'msg': "Cet identifiant n'est pas associé a une cagnote !"}, safe=False, status=200)
+                return JsonResponse({'msg': "Cet identifiant n'est pas associé a une cagnotte !"}, safe=False, status=200)
         except:
             return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
     else:
@@ -311,8 +351,9 @@ def client_cloturer_cagnote(request):
         data = json.loads(request.body.decode('utf-8'))
         try:
             cagnote = Cagnote.objects.get(id=data['cagnote'])
-            client = Client_DigiPay.objects.get(id=data['client'])
-            result = cloturer_cagnote(client, cagnote)
+            beneficiaire = Client_DigiPay.objects.get(
+                id=cagnote.beneficiaire.id)
+            result = cloturer_cagnote(beneficiaire, cagnote)
             return JsonResponse(result, safe=False, status=201)
         except:
             return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
@@ -338,6 +379,27 @@ def getBeneficiares_grpPayement(request):
 
 @api_view(['POST'])
 @permission_classes((IsAuthenticated,))
+def getBeneficiares_by_codeGrpPayement(request):
+    if request.method == 'POST':
+        data = json.loads(request.body.decode('utf-8'))
+        try:
+            user = MyUser.objects.get(id=data['user'])
+            transferts = Transfert_Direct.objects.filter(
+                numero_grp_payement=data['numero_grp_payement'], expediteur=user).order_by('-date_creation')
+
+            result = TransfertDirectFullSerializer(
+                transferts, many=True).data
+
+            print(result)
+            return JsonResponse(result, safe=False, status=200)
+        except:
+            return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
+    else:
+        return HttpResponse(status=405)
+
+
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
 def check_clientDigiPay_grpPayement(request):
     if request.method == 'POST':
         data = json.loads(request.body.decode('utf-8'))
@@ -349,7 +411,6 @@ def check_clientDigiPay_grpPayement(request):
                 return JsonResponse(result, safe=False, status=200)
 
             client = client[0]
-            print(client)
             if not client.is_active:
                 result = {'msg': "ce client digiPay n'est plus active !  "}
                 return JsonResponse(result, safe=False, status=200)
@@ -448,17 +509,22 @@ def client_payement_masse(request):
         data = json.loads(request.body.decode('utf-8'))
         try:
             grp_payement = Group_Payement.objects.get(id=data['grp_payement'])
+            grp_payement.motif = data['motif']
+            grp_payement.save()
+
             beneficiaires = Beneficiares_GrpPayement.objects.filter(
                 grp_payement=grp_payement)
 
             destinataires = []
             for b in beneficiaires:
-                temp = {'user': Client_DigiPay.objects.get(id=b.beneficiaire.id) , 'montant': b.montant}
+                temp = {'user': Client_DigiPay.objects.get(
+                    id=b.beneficiaire.id), 'montant': b.montant, 'motif': b.motif}
                 destinataires.append(temp)
 
             entreprise = Client_DigiPay.objects.get(id=data['expediteur'])
 
-            result = payement_masse(entreprise, destinataires, data['total'])
+            result = payement_masse(
+                entreprise, destinataires, grp_payement.total_montant, grp_payement.motif)
 
             return JsonResponse(result, safe=False, status=200)
         except:

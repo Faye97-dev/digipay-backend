@@ -103,9 +103,13 @@ def transactionListByUser(user):
         # transfert_agence = [item.id for item in list(
         #    Transfert.objects.filter(destinataire__id=user.client))]
         ###
-        transferts = [item.id for item in list(Transfert_Direct.objects.filter(
-            expediteur=user))]
-        retraits = [item.id for item in list(Transfert_Direct.objects.filter(
+        paiements_masse = [item.id for item in list(Transfert_Direct.objects.distinct('numero_grp_payement').filter(
+            expediteur=user, numero_grp_payement__isnull=False))]
+        # print(paiements_masse)
+
+        depenses = [item.id for item in list(Transfert_Direct.objects.filter(
+            expediteur=user, numero_grp_payement__isnull=True))]
+        recettes = [item.id for item in list(Transfert_Direct.objects.filter(
             destinataire=user))]
 
         donations = [item.id for item in list(Transfert_Cagnote.objects.filter(
@@ -113,7 +117,8 @@ def transactionListByUser(user):
         recoltes = [item.id for item in list(Transfert_Cagnote.objects.filter(
             destinataire=user.id))]
 
-        all_ = retraits_agence+recharges_agence+transferts+retraits+donations+recoltes
+        all_ = retraits_agence+recharges_agence + \
+            paiements_masse+depenses+recettes+donations+recoltes
         res = Transaction.objects.filter(
             transaction__id__in=list(set(all_))).order_by('-date')
         print('transactions list CLIENT  .....')
@@ -187,6 +192,13 @@ def participationCagnoteListByUser(user):
         return res
     else:
         return []
+
+
+def paiement_masse_total(numero_grp_payement):
+    result = Transfert_Direct.objects.filter(
+        Q(numero_grp_payement=numero_grp_payement) &
+        (Q(status=Transfert_Direct.COMFIRMED) | Q(status=Transfert_Direct.WITHDRAWED))).aggregate(Sum('montant'))['montant__sum'] or 0
+    return result
 
 
 @api_view(['GET'])

@@ -39,6 +39,8 @@ urlpatterns = [
 
     path('cagnote/create/', createCagnote),
     path('cagnote/list/', getCagnoteList),
+    path('cagnote/check-client_digipay/', check_clientDigiPay_newCagnote),
+
 
     path('grp-payement/list/', Grp_PayementListAPIViews.as_view()),
     path('grp-payement/create/', Grp_PayementCreateAPIViews.as_view()),
@@ -63,6 +65,9 @@ urlpatterns = [
     path('func/transaction/retrait-list/', transactions_a_retirer),
     path('func/transaction/valid-secret-key/', check_secret_key),
     path('func/transaction/valid-compensation/', valid_compensation),
+    path('func/transaction/beneficiaires-payement_masse/',
+         getBeneficiares_by_codeGrpPayement),
+
     path('func/client/valid-client-tel/', check_existant_tel),
     # retrait dans une agence par un anonyme
     path('func/client/retrait-by-sms/', client_parSmsRetrait),

@@ -168,7 +168,7 @@ def payement(client, pre_transactionId):
         return {'msg': "Votre solde est insuffisant pour effectuer cette opération"}
 
 
-def payement_masse(entreprise, clients, total):
+def payement_masse(entreprise, clients, total, motif):
     if entreprise.solde >= total:
         numero_grp_payement = str(uuid.uuid4().hex.upper())
         for client in clients:
@@ -177,7 +177,8 @@ def payement_masse(entreprise, clients, total):
                 destinataire=client['user'],
                 status=TransactionModel.COMFIRMED,
                 montant=client["montant"],
-                numero_grp_payement=numero_grp_payement)
+                numero_grp_payement=numero_grp_payement,
+                remarque=motif+" - "+client['motif'])
             transfert.save()
 
             transaction = Transaction(
@@ -188,8 +189,8 @@ def payement_masse(entreprise, clients, total):
             client['user'].save()
 
             entreprise.solde -= transfert.montant
+            entreprise.save()
 
-        entreprise.save()
         return {'transaction': "Opération réussie !"}
     else:
         return {'msg': "Votre solde est insuffisant pour effectuer cette opération"}
@@ -317,10 +318,10 @@ def update_participation_cagnote(client, cagnote, montant):
         return {'msg': "Votre solde est insuffisant pour effectuer cette opération"}
 
 
-def cloturer_cagnote(client, cagnote):
+def cloturer_cagnote(beneficiaire, cagnote):
     transfert = Transfert_Cagnote(
         expediteur=cagnote.id,
-        destinataire=client.id,
+        destinataire=beneficiaire.id,
         type_transaction=Transfert_Cagnote.RECOLTE,
         status=TransactionModel.COMFIRMED,
         montant=cagnote.solde,
@@ -331,18 +332,17 @@ def cloturer_cagnote(client, cagnote):
         transaction=transfert, type_transaction=Transaction.RECOLTE, date=transfert.date_creation)
     transaction.save()
 
-    client.solde += transfert.montant
-    client.save()
+    beneficiaire.solde += transfert.montant
+    beneficiaire.save()
 
     cagnote.actif = False
     cagnote.verse_au_solde = True
-    cagnote.solde = 0
     cagnote.save()
 
     result = {}
     result['cagnote'] = CagnoteFullSerializer(cagnote).data
     participation = Participants_Cagnote.objects.filter(
-        participant=client, cagnote=cagnote)
+        participant=cagnote.responsable, cagnote=cagnote)
 
     if len(list(participation)) != 0:
         result['participation'] = {

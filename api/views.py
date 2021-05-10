@@ -14,7 +14,7 @@ from .models import *
 from users.models import MyUser, Responsable, Employee, Client_DigiPay, Vendor, Transfert_Direct, Notification, Agent, Participants_Cagnote, Cagnote, Transfert_Cagnote
 from .filters import *
 from django.forms.models import model_to_dict
-from .service import transactionListByUser, compensationsListByUser
+from .service import transactionListByUser, compensationsListByUser, paiement_masse_total
 import json
 
 # Create your views here.
@@ -193,6 +193,12 @@ class TransactionListAPIViews(generics.ListAPIView):
                     id=d['transaction'])
                 d['transaction'] = TransfertDirectFullSerializer(
                     transfert).data
+                if transfert.expediteur.id == request.user.id and d['type_transaction'] == Transaction.PAIEMENT_MASSE:
+                    d['transaction']['total'] = paiement_masse_total(
+                        transfert.numero_grp_payement)
+                else:
+                    d['transaction']['total'] = None
+
                 data.append(d)
             elif d['type_transaction'] in [Transaction.CAGNOTE, Transaction.RECOLTE]:
                 transfert = Transfert_Cagnote.objects.get(
@@ -263,7 +269,7 @@ class TransactionCreateAPIViews(generics.CreateAPIView):
 class Grp_PayementListAPIViews(generics.ListAPIView):
     serializer_class = Grp_PayementFullSerializer
     permission_classes = [IsAuthenticated]
-    #queryset = Group_Payement.objects.all().order_by('-date')
+    # queryset = Group_Payement.objects.all().order_by('-date')
 
     def get_queryset(self):
         if self.request.user.role == MyUser.CLIENT:
@@ -298,7 +304,7 @@ class Grp_PayementDeleteAPIViews(generics.DestroyAPIView):
 class ParticipationCagnoteListAPIViews(generics.ListAPIView):
     serializer_class = ParticipationCagnoteFullSerializer
     permission_classes = [IsAuthenticated]
-    #queryset = Transaction.objects.all().order_by('-date')
+    # queryset = Transaction.objects.all().order_by('-date')
 
     def get_queryset(self):
         return participationCagnoteListByUser(self.request.user)
