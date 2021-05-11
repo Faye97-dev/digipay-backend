@@ -237,6 +237,8 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         #login_success = False
 
         device_authorized = False
+        is_authenticated = False
+        data = None
         try:
             request = self.context['request']
             request_data = request.data
@@ -253,35 +255,50 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                 raise exceptions.AuthenticationFailed(
                     "Utilisateur Inexistant !", "error")
             else:
-                '''
                 if user.role == MyUser.CLIENT:
-                    user = Client_DigiPay.objects.get(id=user.id)
-                    if 'device_connecte' in request_data.keys():
-                        if user.device_connecte:
-                            if user.device_connecte == request_data['device_connecte']:
-                                device_authorized = True
-                            else:
-                                device_authorized = False
-                        else:
-                            # handle credentials before save
-                            user.device_connecte = request_data['device_connecte']
-                            user.save()
-                            device_authorized = True
+                    if 'debugMode' in request_data.keys() and request_data['debugMode']:
+                        device_authorized = True
+                        print("Web connexion mode !")
                     else:
-                        device_authorized = False
-                        print("device connecte non renseigner !")
+                        user = Client_DigiPay.objects.get(id=user.id)
+                        if 'device_connecte' in request_data.keys():
+                            if user.device_connecte:
+                                if user.device_connecte == request_data['device_connecte']:
+                                    print("Device_connecte success !")
+                                    # check credentials of user
+                                    device_authorized = True
+                                    data = super().validate(attrs)
+                                    # if login success
+                                    is_authenticated = True
+                                else:
+                                    device_authorized = False
+                                    print("Device_connecte invalid !")
+                            else:
+                                # check credentials of user
+                                device_authorized = True
+                                data = super().validate(attrs)
+                                # if login success
+                                is_authenticated = True
+
+                                user.device_connecte = request_data['device_connecte']
+                                user.save()
+                                print("First time login !")
+                        else:
+                            device_authorized = False
+                            print("Device connecte non renseigner !")
                 else:
                     device_authorized = True
-                '''
-                device_authorized = True
+                    print("Not a client user !")
         finally:
             if not device_authorized:
-                error_msg = "Telephone non autorise !"
+                error_msg = "Téléphone non autorisé !"
                 error_name = "device_connecte"
                 raise exceptions.AuthenticationFailed(
                     error_msg, error_name)
             else:
-                data = super().validate(attrs)
+                if not is_authenticated:
+                    data = super().validate(attrs)
+
                 refresh = self.get_token(self.user)
                 data['refresh'] = str(refresh)
                 data['access'] = str(refresh.access_token)

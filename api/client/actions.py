@@ -339,6 +339,12 @@ def cloturer_cagnote(beneficiaire, cagnote):
     cagnote.verse_au_solde = True
     cagnote.save()
 
+    temp = Client_DigiPay.objects.get(id=cagnote.responsable.id)
+    msgClient = Notification(
+        user=beneficiaire, transaction=transfert, status=Notification.CAGNOTE,
+        message="Vous avez reçu une recolte de cagnotte de " + str(transfert.montant) + " MRU créer par " + temp.name + ' (' + temp.tel+')')
+    msgClient.save()
+
     result = {}
     result['cagnote'] = CagnoteFullSerializer(cagnote).data
     participation = Participants_Cagnote.objects.filter(

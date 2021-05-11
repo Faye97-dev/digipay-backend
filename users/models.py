@@ -72,7 +72,12 @@ class MyUser(AbstractBaseUser, PermissionsMixin):
     )
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
-    # child_id = models.IntegerField(null=True)
+
+    ###
+    date_naissance = models.CharField(max_length=50, blank=True, null=True)
+    identifiant = models.CharField(max_length=25, null=True, unique=True)
+    compte_banquaire = models.CharField(
+        max_length=70, null=True, unique=True)
 
     objects = CustomAccountManager()
 
@@ -167,17 +172,17 @@ class Responsable(MyUser, PermissionsMixin):
 
 
 class Client_DigiPay(MyUser, PermissionsMixin):
-    date_naissance = models.CharField(max_length=50, blank=True, null=True)
-    identifiant = models.CharField(max_length=15, null=True, unique=True)
+    #date_naissance = models.CharField(max_length=50, blank=True, null=True)
+    #identifiant = models.CharField(max_length=15, null=True, unique=True)
     tel = models.CharField(max_length=50, blank=True, unique=True)
     email = models.EmailField(null=True, blank=True)
     adresse = models.CharField(max_length=100, null=True, blank=True)
     solde = models.FloatField(default=0.0)
     on_hold = models.FloatField(default=0.0)
     client = models.IntegerField(null=True)
+
+    ###
     valide_en_agence = models.BooleanField(default=False)
-    compte_banquaire = models.CharField(
-        max_length=70, null=True, unique=True)
     device_connecte = models.CharField(
         max_length=70, null=True, unique=True)
     premium = models.BooleanField(default=False)
@@ -270,8 +275,6 @@ class Vendor(MyUser, PermissionsMixin):
     client = models.IntegerField(null=True)
     on_hold = models.FloatField(default=0.0)
     myId = models.CharField(unique=True, max_length=5, blank=True)
-    compte_banquaire = models.CharField(
-        max_length=70, blank=True, null=True, unique=True)
 
     @property
     def name(self):
@@ -543,6 +546,7 @@ class Transfert_Direct(TransactionModel):
     frais_origine = models.FloatField(default=0.0)
     frais_destination = models.FloatField(default=0.0)
     frais_societe = models.FloatField(default=0.0)
+    # comission et taxe
 
     delai_livraison = models.IntegerField(null=True)
     libele = models.TextField(blank=True, null=True, default='')
@@ -582,6 +586,7 @@ class Notification(models.Model):
     PAIEMENT = 'PAIEMENT'
     ENVOI = 'ENVOI'
     RECHARGE = 'RECHARGE'
+    CAGNOTE = 'CAGNOTTE'
     TAGS = ((DEMANDE_PAIEMENT, 'DEMANDE DE PAIEMENT'),
             (DEMANDE_RETRAIT, 'DEMANDE DE RETRAIT'),
             (DEMANDE_COMPENSATION, 'DEMANDE DE COMPENSATION'),
@@ -589,7 +594,8 @@ class Notification(models.Model):
             (RETRAIT, 'RETRAIT'),
             (PAIEMENT, 'PAIEMENT'),
             (ENVOI, 'ENVOI'),
-            (RECHARGE, 'RECHARGE'))
+            (RECHARGE, 'RECHARGE'),
+            (CAGNOTE, 'CAGNOTTE'))
     user = models.ForeignKey(MyUser, blank=True, on_delete=models.CASCADE)
     transaction = models.ForeignKey(TransactionModel, on_delete=models.CASCADE)
 

@@ -255,18 +255,12 @@ def createCagnote(request):
     if request.method == 'POST':
         data = json.loads(request.body.decode('utf-8'))
         try:
-            if not data['choix_beneficiaire']:
-                client = Client_DigiPay.objects.get(id=data['client'])
-                cagnote = Cagnote(
-                    nom=data['nom'], objectif=data['objectif'], motif=data['motif'], responsable=client, beneficiaire=client)
-                cagnote.save()
-            else:
-                client = Client_DigiPay.objects.get(id=data['client'])
-                beneficiaire = Client_DigiPay.objects.get(
-                    id=data['beneficiaire'])
-                cagnote = Cagnote(
-                    nom=data['nom'], objectif=data['objectif'], motif=data['motif'], responsable=client, beneficiaire=beneficiaire)
-                cagnote.save()
+            client = Client_DigiPay.objects.get(id=data['client'])
+            beneficiaire = Client_DigiPay.objects.get(
+                id=data['beneficiaire'])
+            cagnote = Cagnote(
+                nom=data['nom'], objectif=data['objectif'], motif=data['motif'], responsable=client, beneficiaire=beneficiaire)
+            cagnote.save()
 
             result = {}
             result['cagnote'] = CagnoteFullSerializer(cagnote).data
@@ -390,7 +384,6 @@ def getBeneficiares_by_codeGrpPayement(request):
             result = TransfertDirectFullSerializer(
                 transferts, many=True).data
 
-            print(result)
             return JsonResponse(result, safe=False, status=200)
         except:
             return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
