@@ -7,26 +7,31 @@ from random import randint
 
 
 def pre_compensation(agent, data):
-    transaction_type = None
-    msg_transaction_type = None
-    #msg_transaction_type_ar = None
-    if data['type_trans'] == 'versement':
-        transaction_type = Transaction.COMP_VERSEMENT
-        msg_transaction_type = 'versement'
-        #msg_transaction_type_ar = 'دفع'
-    elif data['type_trans'] == 'retrait':
-        transaction_type = Transaction.COMP_RETRAIT
-        msg_transaction_type = 'retrait'
-        #msg_transaction_type_ar = 'سحب'
-    else:
-        return {'msg': "le type de transaction est invalid !"}
-    ##
     agence = Agence.objects.get(id=data['agence_destination'])
     responsable = Responsable.objects.filter(agence=agence)
     if len(responsable) != 0:
         responsable = responsable[0]
     else:
         return {'msg': "Aucun responsable d'agence n'est associé a cette agence !"}
+
+    ##
+    transaction_type = None
+    msg_transaction_type = None
+    #msg_transaction_type_ar = None
+    if data['type_trans'] == 'versement':
+        if agent.solde >= data['montant']:
+            transaction_type = Transaction.COMP_VERSEMENT
+            msg_transaction_type = 'versement'
+            #msg_transaction_type_ar = 'دفع'
+        else:
+            return {'msg': "votre solde est insuffisant pour effectuer cette opération"}
+    elif data['type_trans'] == 'retrait':
+        transaction_type = Transaction.COMP_RETRAIT
+        msg_transaction_type = 'retrait'
+        #msg_transaction_type_ar = 'سحب'
+    else:
+        return {'msg': "le type de transaction est invalid !"}
+
     ##
     compensation = Compensation(agence=agence,
                                 agent=agent,

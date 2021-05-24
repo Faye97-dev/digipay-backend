@@ -283,17 +283,17 @@ def participer_cagnote(client, cagnote, montant):
 
 
 def update_participation_cagnote(client, cagnote, montant):
-    if client.solde >= montant:
-        participation = Participants_Cagnote.objects.filter(
-            participant=client, cagnote=cagnote)
-        transfert = Transfert_Cagnote.objects.filter(
-            expediteur=client.id, destinataire=cagnote.id)
-
-        if len(participation) == 0 or len(transfert) == 0:
-            return {'msg': "Pas de participation fait par ce compte utilisateur !"}
+    participation = Participants_Cagnote.objects.filter(
+        participant=client, cagnote=cagnote)
+    transfert = Transfert_Cagnote.objects.filter(
+        expediteur=client.id, destinataire=cagnote.id)
+    if len(participation) == 0 or len(transfert) == 0:
+        return {'msg': "Pas de participation fait par ce compte utilisateur !"}
+    else:
         participation = participation[0]
         transfert = transfert[0]
 
+    if client.solde + participation.montant >= montant:
         client.solde += participation.montant
         client.solde -= montant
         client.save()

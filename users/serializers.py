@@ -18,7 +18,8 @@ class Agent_UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = Agent
         fields = ('id', 'username', 'first_name', 'last_name',
-                  'role', 'password', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login')
+                  'role', 'password', 'tel', 'email', 'adresse', 'solde', 'start_date', 'is_active', 'last_login',
+                  'date_naissance', 'identifiant', 'compte_banquaire')
         extra_kwargs = {'password': {'write_only': True},
                         'id': {'read_only': True}, 'start_date': {'read_only': True}, 'last_login': {'read_only': True}}
 
@@ -49,7 +50,8 @@ class SysAdmin_UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = SysAdmin
         fields = ('id', 'username', 'first_name', 'last_name',
-                  'role', 'password', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login')
+                  'role', 'password', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login',
+                  'date_naissance', 'identifiant', 'compte_banquaire')
         extra_kwargs = {'password': {'write_only': True},
                         'id': {'read_only': True}, 'start_date': {'read_only': True}, 'last_login': {'read_only': True}}
 
@@ -95,7 +97,8 @@ class EmployeFullSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
         fields = ('id', 'username', 'first_name', 'last_name',
-                  'role', 'password', 'tel', 'email', 'adresse', 'agence', 'start_date', 'is_active', 'last_login')
+                  'role', 'password', 'tel', 'email', 'adresse', 'agence', 'start_date', 'is_active', 'last_login',
+                  'date_naissance', 'identifiant', 'compte_banquaire')
         extra_kwargs = {'password': {'write_only': True},
                         'id': {'read_only': True}, 'start_date': {'read_only': True}, 'last_login': {'read_only': True}}
 
@@ -116,7 +119,8 @@ class Responsable_UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = Responsable
         fields = ('id', 'username', 'first_name', 'last_name',
-                  'role', 'password', 'tel', 'email', 'adresse', 'agence', 'start_date', 'is_active', 'last_login')
+                  'role', 'password', 'tel', 'email', 'adresse', 'agence', 'start_date', 'is_active', 'last_login',
+                  'date_naissance', 'identifiant', 'compte_banquaire')
         extra_kwargs = {'password': {'write_only': True},
                         'id': {'read_only': True}, 'start_date': {'read_only': True}, 'last_login': {'read_only': True}}
 
@@ -150,7 +154,8 @@ class ClientDigiPay_UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client_DigiPay
         fields = ('id', 'device_connecte', 'premium', 'username', 'first_name', 'last_name',
-                  'role', 'password', 'tel', 'email', 'adresse', 'solde', "on_hold", 'client', 'start_date', 'is_active', 'last_login')
+                  'role', 'password', 'tel', 'email', 'adresse', 'solde', "on_hold", 'client', 'start_date', 'is_active', 'last_login',
+                  'date_naissance', 'identifiant', 'compte_banquaire')
         extra_kwargs = {'password': {'write_only': True}, 'device_connecte': {'write_only': True},
                         'id': {'read_only': True}, 'start_date': {'read_only': True}, 'last_login': {'read_only': True}}
 
@@ -189,7 +194,8 @@ class Vendor_UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vendor
         fields = ('id', "myId", 'username', 'first_name', 'last_name',
-                  'role', 'password', 'tel', 'email', 'adresse', 'solde', "on_hold", 'client', 'start_date', 'is_active', 'last_login')
+                  'role', 'password', 'tel', 'email', 'adresse', 'solde', "on_hold", 'client', 'start_date', 'is_active', 'last_login',
+                  'date_naissance', 'identifiant', 'compte_banquaire')
         extra_kwargs = {'password': {'write_only': True},
                         'id': {'read_only': True}, 'start_date': {'read_only': True}, 'last_login': {'read_only': True}}
 
@@ -256,9 +262,10 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                     "Utilisateur Inexistant !", "error")
             else:
                 if user.role == MyUser.CLIENT:
-                    if 'debugMode' in request_data.keys() and request_data['debugMode']:
-                        device_authorized = True
-                        print("Web connexion mode !")
+                    if 'debugMode' in request_data.keys():
+                        if request_data['debugMode']:
+                            device_authorized = True
+                            print("Web connexion mode !")
                     else:
                         user = Client_DigiPay.objects.get(id=user.id)
                         if 'device_connecte' in request_data.keys():
@@ -312,7 +319,8 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                         "%d-%m-%Y %H:%M:%S") if data['agence']['last_date_cloture'] else data['agence']['last_date_cloture']
                     # print(data['agence']['last_date_cloture'])
                     data.update(model_to_dict(responsable, fields=['id', 'username', 'first_name', 'last_name',
-                                                                   'role', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
+                                                                   'role', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login',
+                                                                   'date_naissance', 'identifiant', 'compte_banquaire']))
                     data['last_login'] = data['last_login'].strftime(
                         "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
                     data['start_date'] = data['start_date'].strftime(
@@ -325,7 +333,8 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                     data['agence']['last_date_cloture'] = data['agence']['last_date_cloture'].strftime(
                         "%d-%m-%Y %H:%M:%S") if data['agence']['last_date_cloture'] else data['agence']['last_date_cloture']
                     data.update(model_to_dict(employe, fields=['id', 'username', 'first_name', 'last_name',
-                                                               'role', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
+                                                               'role', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login',
+                                                               'date_naissance', 'identifiant', 'compte_banquaire']))
                     data['last_login'] = data['last_login'].strftime(
                         "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
                     data['start_date'] = data['start_date'].strftime(
@@ -334,7 +343,8 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                 elif self.user.role == MyUser.AGENT_COMPENSATION:
                     agent = Agent.objects.get(id=self.user.id)
                     data.update(model_to_dict(agent, fields=['id', 'username', 'first_name', 'last_name',
-                                                             'role', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
+                                                             'role', 'tel', 'email', 'adresse', 'solde', 'start_date', 'is_active', 'last_login',
+                                                             'date_naissance', 'identifiant', 'compte_banquaire']))
                     data['last_login'] = data['last_login'].strftime(
                         "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
                     data['start_date'] = data['start_date'].strftime(
@@ -343,7 +353,8 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                 elif self.user.role == MyUser.SYSADMIN:
                     sysadmin = SysAdmin.objects.get(id=self.user.id)
                     data.update(model_to_dict(sysadmin, fields=['id', 'username', 'first_name', 'last_name',
-                                                                'role', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
+                                                                'role', 'tel', 'email', 'adresse', 'start_date', 'is_active', 'last_login',
+                                                                'date_naissance', 'identifiant', 'compte_banquaire']))
                     data['last_login'] = data['last_login'].strftime(
                         "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
                     data['start_date'] = data['start_date'].strftime(
@@ -352,7 +363,8 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                 elif self.user.role == MyUser.VENDOR:
                     vendor = Vendor.objects.get(id=self.user.id)
                     data.update(model_to_dict(vendor, fields=['id', "myId", 'username', 'first_name', 'last_name',
-                                                              'role', 'tel', 'solde', "on_hold", 'client', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
+                                                              'role', 'tel', 'solde', "on_hold", 'client', 'email', 'adresse', 'start_date', 'is_active', 'last_login',
+                                                              'date_naissance', 'identifiant', 'compte_banquaire']))
                     data['last_login'] = data['last_login'].strftime(
                         "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
                     data['start_date'] = data['start_date'].strftime(
@@ -361,7 +373,8 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                 elif self.user.role == MyUser.CLIENT:
                     client = Client_DigiPay.objects.get(id=self.user.id)
                     data.update(model_to_dict(client, fields=['id', 'username', 'premium', 'first_name', 'last_name',
-                                                              'role', 'tel', 'solde', "on_hold", 'client', 'email', 'adresse', 'start_date', 'is_active', 'last_login']))
+                                                              'role', 'tel', 'solde', "on_hold", 'client', 'email', 'adresse', 'start_date', 'is_active', 'last_login',
+                                                              'date_naissance', 'identifiant', 'compte_banquaire']))
                     data['last_login'] = data['last_login'].strftime(
                         "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
                     data['start_date'] = data['start_date'].strftime(

@@ -182,18 +182,28 @@ def retrait_par_code(agence, pre_transactionId):
 
 def confirmer_compensation(agence, transactionID, notifID):
     compensation = Compensation.objects.get(id=transactionID)
+    agent = compensation.agent
     transaction = Transaction.objects.get(transaction=compensation)
     notification = Notification.objects.get(id=notifID)
 
     if transaction.type_transaction == Transaction.COMP_VERSEMENT:
-        compensation.status = Compensation.COMFIRMED
-        compensation.save()
+        if agent.solde >= compensation.montant:
+            compensation.status = Compensation.COMFIRMED
+            compensation.save()
 
-        agence.solde += compensation.montant
-        agence.save()
+            agence.solde += compensation.montant
+            agence.save()
 
-        notification.delete()
-        return {'result': 'Compensation validée avec succes !'}
+            agent.solde -= compensation.montant
+            agent.save()
+
+            notification.delete()
+
+            transaction.date = compensation.date_modifcation
+            transaction.save()
+            return {'result': 'Compensation validée avec succes !'}
+        else:
+            return {'msg': "l'agent n'a plus le solde suffisant pour effectuer cette opération"}
     elif transaction.type_transaction == Transaction.COMP_RETRAIT:
         if agence.solde >= compensation.montant:
             compensation.status = Compensation.COMFIRMED
@@ -202,7 +212,13 @@ def confirmer_compensation(agence, transactionID, notifID):
             agence.solde -= compensation.montant
             agence.save()
 
+            agent.solde += compensation.montant
+            agent.save()
+
             notification.delete()
+
+            transaction.date = compensation.date_modifcation
+            transaction.save()
             return {'result': 'Compensation validée avec succes !'}
         else:
             return {'msg': "le solde de l'agence est insuffisant pour effectuer cette opération"}
@@ -213,7 +229,14 @@ def annuler_compensation(agence, transactionID, notifID):
     compensation = Compensation.objects.get(id=transactionID)
     compensation.status = Compensation.CANCELED
     compensation.save()
+
+    transaction = Transaction.objects.get(transaction=compensation)
+
     ##
     notification = Notification.objects.get(id=notifID)
     notification.delete()
+
+    ###
+    transaction.date = compensation.date_modifcation
+    transaction.save()
     return {'result': 'Compensation annulée avec succes !'}

@@ -75,9 +75,10 @@ class MyUser(AbstractBaseUser, PermissionsMixin):
 
     ###
     date_naissance = models.CharField(max_length=50, blank=True, null=True)
-    identifiant = models.CharField(max_length=25, null=True, unique=True)
+    identifiant = models.CharField(
+        max_length=25, null=True, unique=True, blank=True)
     compte_banquaire = models.CharField(
-        max_length=70, null=True, unique=True)
+        max_length=70, null=True, unique=True, blank=True)
 
     objects = CustomAccountManager()
 
@@ -119,6 +120,8 @@ class Agent(MyUser, PermissionsMixin):
     tel = models.CharField(max_length=50, blank=True, null=True)
     email = models.EmailField(null=True, blank=True)
     adresse = models.CharField(max_length=100, null=True, blank=True)
+    solde = models.FloatField(default=0.0)
+    #on_hold = models.FloatField(default=0.0)
 
     @property
     def name(self):
@@ -184,7 +187,7 @@ class Client_DigiPay(MyUser, PermissionsMixin):
     ###
     valide_en_agence = models.BooleanField(default=False)
     device_connecte = models.CharField(
-        max_length=70, null=True, unique=True)
+        max_length=70, null=True, unique=False, blank=True)
     premium = models.BooleanField(default=False)
 
     @property

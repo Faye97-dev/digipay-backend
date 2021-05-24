@@ -129,12 +129,18 @@ class ClotureViewsets(viewsets.ModelViewSet):
 class NotificationListAPIViews(generics.ListAPIView):
     serializer_class = NotificationSerializer
     permission_classes = [IsAuthenticated]
-    queryset = Notification.objects.all().order_by('-date')
-    filterset_class = NotificationFilter
+    #queryset = Notification.objects.all().order_by('-date')
+    #filterset_class = NotificationFilter
+
+    def get_queryset(self):
+        res = Notification.objects.filter(
+            user=self.request.user).order_by('-date')
+        return res
 
     def list(self, request):
-        serializer = self.serializer_class(
-            self.filter_queryset(self.get_queryset()), many=True)
+        # serializer = self.serializer_class(
+        #    self.filter_queryset(self.get_queryset()), many=True)
+        serializer = self.serializer_class(self.get_queryset(), many=True)
 
         data = []
         for d in serializer.data:
@@ -144,7 +150,7 @@ class NotificationListAPIViews(generics.ListAPIView):
                 d['transaction'] = CompensationFullSerializer(
                     compensation).data
                 data.append(d)
-            if d['status'] in [Notification.DEMANDE_PAIEMENT]:
+            elif d['status'] in [Notification.DEMANDE_PAIEMENT]:
                 pre_transaction = Pre_Transaction.objects.get(
                     id=d['transaction'])
                 d['transaction'] = PreTransactionSerializer(
@@ -208,6 +214,21 @@ class TransactionListAPIViews(generics.ListAPIView):
                 data.append(d)
             else:
                 data.append(d)
+
+        # for d in data[:10]:
+        #    print(json.dumps(d) + "\n")
+
+        '''
+        file_ = open("dummy_data.txt", "w")
+        for e in data:
+            file_.write(json.dumps(e) + "\n")
+        file_.close()
+
+        with open("./dummy_data.txt", 'w') as f:
+            for d in data:
+                f.write(json.dumps(d))
+                # print(json.dumps(d))
+        '''
         return Response(data)
 
 
@@ -233,6 +254,10 @@ class TransactionCompensationListAPIViews(generics.ListAPIView):
                 data.append(d)
             else:
                 data.append(d)
+
+        # for d in data[:5]:
+        #    print(json.dumps(d) + "\n")
+
         return Response(data)
 
 
