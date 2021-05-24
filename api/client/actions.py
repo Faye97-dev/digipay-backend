@@ -146,7 +146,7 @@ def payement(client, pre_transactionId):
                 transfert).data
 
             # notifications
-            '''
+
             msgClient = Notification(
                 user=client, transaction=transfert, status=Notification.PAIEMENT,
                 message="Vous avez effectué un paiement de " + str(pre_transaction.montant) + " MRU au commerçant " + commercant.name + ' (' + commercant.tel+'). Merci de fournir le code livraison '+transfert.code_secret)
@@ -156,7 +156,6 @@ def payement(client, pre_transactionId):
                 user=commercant, transaction=transfert, status=Notification.PAIEMENT,
                 message="Vous avez reçu un paiement de " + str(pre_transaction.montant) + " MRU du client " + client.name + ' (' + client.tel+') . Merci de confirmer la livraison')
             msgCommercant.save()
-            '''
 
             client.on_hold += pre_transaction.montant
             client.solde -= pre_transaction.montant
