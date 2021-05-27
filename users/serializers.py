@@ -231,7 +231,7 @@ class Vendor_ProfilSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vendor
         fields = ('id', 'username', 'first_name', 'role',
-                  'last_name', 'tel', 'email', 'adresse')
+                  'last_name', 'tel', 'email', 'adresse', 'myId')
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):

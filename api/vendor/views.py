@@ -94,9 +94,9 @@ def vendor_check_VendorId(request):
                     result = Vendor_UserSerializer(commercant[0]).data
                     return JsonResponse(result, safe=False, status=200)
                 else:
-                    return JsonResponse({'msg': "Ce numéro d'identification est le votre !"}, safe=False, status=200)
+                    return JsonResponse({'msg': "Ce code commerçant est le votre !"}, safe=False, status=200)
             else:
-                return JsonResponse({'msg': "Aucun commerçant n'est pas associé a ce numéro d'identification !"}, safe=False, status=200)
+                return JsonResponse({'msg': "Aucun commerçant n'est associé avec ce code !"}, safe=False, status=200)
         except:
             return JsonResponse({'msg': ' Exception error !'}, safe=False, status=400)
     else:
