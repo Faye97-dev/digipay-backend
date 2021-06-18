@@ -2,7 +2,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from .models import HOST
 from django.http import JsonResponse, HttpResponse
 import requests
-from users.models import Transfert, Transaction, Client_DigiPay, Pre_Transaction, Transfert_Direct, Client
+from users.models import Transfert, Transaction, ClientDigiPay, PreTransaction, TransfertDirect, Client
 from .models import *
 from .serializers import TransfertFullSerializer
 from users.serializers import PreTransactionFullSerializer
@@ -22,9 +22,9 @@ def check_secret_key(request):
             if data['model_transaction'] == 'TRANSFERT':
                 transaction = Transfert.objects.get(id=data['id'])
             elif data['model_transaction'] == 'TRANSFERT_DIRECT':
-                transaction = Transfert_Direct.objects.get(id=data['id'])
+                transaction = TransfertDirect.objects.get(id=data['id'])
             elif data['model_transaction'] == 'PRE_TRANSACTION':
-                transaction = Pre_Transaction.objects.get(id=data['id'])
+                transaction = PreTransaction.objects.get(id=data['id'])
             else:
                 return JsonResponse({'msg': ' Invalid Json format !'}, safe=False, status=400)
 

@@ -7,11 +7,11 @@ from rest_framework import status, generics, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .serializers import *
-from users.serializers import CompensationFullSerializer, TransfertDirectFullSerializer, CagnoteSerializer, Transfert_CagnoteFullSerializer, Grp_PayementFullSerializer, Grp_PayementSerializer, Beneficiares_GrpPayementSerializer, Beneficiares_GrpPayementFullSerializer
-from users.models import Transfert, Group_Payement, Beneficiares_GrpPayement
+from users.serializers import CompensationFullSerializer, TransfertDirectFullSerializer, CagnoteSerializer, TransfertCagnoteFullSerializer, Grp_PayementFullSerializer, Grp_PayementSerializer, BeneficiaresGrpPayementSerializer, BeneficiaresGrpPayementFullSerializer
+from users.models import Transfert, GroupPayement, BeneficiaresGrpPayement
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import *
-from users.models import MyUser, Responsable, Employee, Client_DigiPay, Vendor, Transfert_Direct, Notification, Agent, Participants_Cagnote, Cagnote, Transfert_Cagnote
+from users.models import MyUser, Responsable, Employee, ClientDigiPay, Vendor, TransfertDirect, Notification, Agent, ParticipantsCagnote, Cagnote, TransfertCagnote
 from .filters import *
 from django.forms.models import model_to_dict
 from .service import transactionListByUser, compensationsListByUser, paiement_masse_total
@@ -151,7 +151,7 @@ class NotificationListAPIViews(generics.ListAPIView):
                     compensation).data
                 data.append(d)
             elif d['status'] in [Notification.DEMANDE_PAIEMENT]:
-                pre_transaction = Pre_Transaction.objects.get(
+                pre_transaction = PreTransaction.objects.get(
                     id=d['transaction'])
                 d['transaction'] = PreTransactionSerializer(
                     pre_transaction).data
@@ -194,8 +194,8 @@ class TransactionListAPIViews(generics.ListAPIView):
                 d['transaction'] = CompensationFullSerializer(
                     compensation).data
                 data.append(d)
-            elif d['type_transaction'] in [Transaction.ENVOI, Transaction.PAIEMENT, Transaction.REMBOURSEMENT, Transaction.PAIEMENT_MASSE]:
-                transfert = Transfert_Direct.objects.get(
+            elif d['type_transaction'] in [Transaction.ENVOI, Transaction.PAIEMENT, Transaction.REMBOURSEMENT, Transaction.PAIEMENT_MASSE, Transaction.PAIEMENT_FACTURE]:
+                transfert = TransfertDirect.objects.get(
                     id=d['transaction'])
                 d['transaction'] = TransfertDirectFullSerializer(
                     transfert).data
@@ -204,12 +204,11 @@ class TransactionListAPIViews(generics.ListAPIView):
                         transfert.numero_grp_payement)
                 else:
                     d['transaction']['total'] = None
-
                 data.append(d)
-            elif d['type_transaction'] in [Transaction.CAGNOTE, Transaction.RECOLTE]:
-                transfert = Transfert_Cagnote.objects.get(
+            elif d['type_transaction'] in [Transaction.CAGNOTE, Transaction.RECOLTE, Transaction.CAGNOTE_ANNULE]:
+                transfert = TransfertCagnote.objects.get(
                     id=d['transaction'])
-                d['transaction'] = Transfert_CagnoteFullSerializer(
+                d['transaction'] = TransfertCagnoteFullSerializer(
                     transfert).data
                 data.append(d)
             else:
@@ -294,11 +293,11 @@ class TransactionCreateAPIViews(generics.CreateAPIView):
 class Grp_PayementListAPIViews(generics.ListAPIView):
     serializer_class = Grp_PayementFullSerializer
     permission_classes = [IsAuthenticated]
-    # queryset = Group_Payement.objects.all().order_by('-date')
+    # queryset = GroupPayement.objects.all().order_by('-date')
 
     def get_queryset(self):
         if self.request.user.role == MyUser.CLIENT:
-            res = Group_Payement.objects.filter(
+            res = GroupPayement.objects.filter(
                 responsable=self.request.user).order_by('-date')
             return res
         else:
@@ -308,13 +307,13 @@ class Grp_PayementListAPIViews(generics.ListAPIView):
 class Grp_PayementCreateAPIViews(generics.CreateAPIView):
     serializer_class = Grp_PayementSerializer
     permission_classes = [IsAuthenticated]
-    queryset = Group_Payement.objects.all()
+    queryset = GroupPayement.objects.all()
 
     def create(self, request, *args, **kwargs):
         response = super(Grp_PayementCreateAPIViews,
                          self).create(request, *args, **kwargs)
         response.status = status.HTTP_200_OK
-        temp = Group_Payement.objects.get(id=response.data['id'])
+        temp = GroupPayement.objects.get(id=response.data['id'])
         response.data = Grp_PayementFullSerializer(temp).data
         return response
 
@@ -322,7 +321,7 @@ class Grp_PayementCreateAPIViews(generics.CreateAPIView):
 class Grp_PayementDeleteAPIViews(generics.DestroyAPIView):
     serializer_class = Grp_PayementSerializer
     permission_classes = [IsAuthenticated]
-    queryset = Group_Payement.objects.all()
+    queryset = GroupPayement.objects.all()
 
 
 '''

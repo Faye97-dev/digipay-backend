@@ -40,6 +40,7 @@ urlpatterns = [
     path('cagnote/create/', createCagnote),
     path('cagnote/list/', getCagnoteList),
     path('cagnote/check-client_digipay/', check_clientDigiPay_newCagnote),
+    path('cagnote/delete/', client_delete_cagnote),
 
 
     path('grp-payement/list/', Grp_PayementListAPIViews.as_view()),
@@ -99,6 +100,10 @@ urlpatterns = [
     path('func/client_digiPay/participants-cagnote/', getParticipantsCagnote),
     path('func/client_digiPay/payement-masse/', client_payement_masse),
 
+    ##
+    path('func/client_digiPay/payement-somelec/', client_somelec_payement),
+    path('func/client_digiPay/reclamation-somelec/', client_somelec_reclamation),
+
 
     # Digipay vendor
     path('func/vendor/gen-code-payement/', random_code_payement),
@@ -122,7 +127,3 @@ urlpatterns = [
 ]
 
 urlpatterns += router.urls
-
-
-# todo :
-# block e-commerce and fast payement for vendor ,

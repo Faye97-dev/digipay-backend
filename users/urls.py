@@ -28,6 +28,10 @@ urlpatterns = [
     path('vendor/update/<int:pk>/', VendorUpdateAPIViews.as_view()),
     path('vendor/func/valid-username/', valid_vendor_username),
 
+    ###
+    path('facturier/register/', Facturier_UserCreate.as_view()),
+    path('facturier/update/<int:pk>/', FacturierUpdateAPIViews.as_view()),
+    path('facturier/list/', FacturierListAPIViews.as_view()),
 
     path('auth-user/get/<int:pk>/', currentUserRetriveAPIViews.as_view()),
     path('password/update/<int:pk>/', UpdatePasswordView.as_view()),

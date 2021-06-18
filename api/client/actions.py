@@ -1,5 +1,5 @@
-from users.models import TransactionModel, Transfert, Transaction, Client_DigiPay, MyUser, Vendor, Client, Pre_Transaction, Notification, Transfert_Direct
-from users.models import Participants_Cagnote, Cagnote, Transfert_Cagnote
+from users.models import TransactionModel, Transfert, Transaction, ClientDigiPay, MyUser, Vendor, Client, PreTransaction, Notification, TransfertDirect
+from users.models import ParticipantsCagnote, Cagnote, TransfertCagnote
 from api.models import Agence
 from api.serializers import TransactionFullSerializer, TransfertFullSerializer
 from users.serializers import TransfertDirectFullSerializer, CagnoteFullSerializer
@@ -12,14 +12,14 @@ def retrait(sender, montant):
     if sender.solde >= montant:
         ##
         codes_list = [
-            item.code_secret for item in Pre_Transaction.objects.all()]
+            item.code_secret for item in PreTransaction.objects.all()]
         code_confirmation = random_code(4, codes_list)
 
-        pre_transaction = Pre_Transaction(
+        pre_transaction = PreTransaction(
             expediteur=sender,
             destinataire=sender.tel,
             status=TransactionModel.TO_VALIDATE,
-            type_transaction=Pre_Transaction.RETRAIT,
+            type_transaction=PreTransaction.RETRAIT,
             montant=montant,
             code_secret=code_confirmation)
         pre_transaction.save()
@@ -39,7 +39,7 @@ def retrait(sender, montant):
 
 def fast_payement(client, commercant, montant, libele):
     if client.solde >= montant:
-        transfert = Transfert_Direct(
+        transfert = TransfertDirect(
             expediteur=client,
             destinataire=commercant,
             status=TransactionModel.COMFIRMED,
@@ -79,12 +79,12 @@ def fast_payement(client, commercant, montant, libele):
 
 
 def payement(client, pre_transactionId):
-    pre_transaction = Pre_Transaction.objects.get(id=pre_transactionId)
+    pre_transaction = PreTransaction.objects.get(id=pre_transactionId)
     commercant = Vendor.objects.get(id=pre_transaction.expediteur.id)
 
     if client.solde >= pre_transaction.montant:
         if not pre_transaction.livraison:
-            transfert = Transfert_Direct(
+            transfert = TransfertDirect(
                 expediteur=client,
                 destinataire=commercant,
                 status=TransactionModel.COMFIRMED,
@@ -124,9 +124,9 @@ def payement(client, pre_transactionId):
             return result
         else:
             codes_list = [
-                item.code_secret for item in Pre_Transaction.objects.all()]
+                item.code_secret for item in PreTransaction.objects.all()]
             code_confirmation = random_code(4, codes_list)
-            transfert = Transfert_Direct(
+            transfert = TransfertDirect(
                 expediteur=client,
                 destinataire=commercant,
                 status=TransactionModel.TO_VALIDATE,
@@ -171,7 +171,7 @@ def payement_masse(entreprise, clients, total, motif):
     if entreprise.solde >= total:
         numero_grp_payement = str(uuid.uuid4().hex.upper())
         for client in clients:
-            transfert = Transfert_Direct(
+            transfert = TransfertDirect(
                 expediteur=entreprise,
                 destinataire=client['user'],
                 status=TransactionModel.COMFIRMED,
@@ -207,7 +207,7 @@ def achat_credit(client, numero, montant):
     if client.solde >= montant:
         carte = operateur + str(random_with_N_digits(13))
 
-        transfert = Transfert_Direct(
+        transfert = TransfertDirect(
             expediteur=client,
             destinataire=commercant,
             status=TransactionModel.COMFIRMED,
@@ -248,14 +248,14 @@ def achat_credit(client, numero, montant):
 
 def participer_cagnote(client, cagnote, montant):
     if client.solde >= montant:
-        participation = Participants_Cagnote(
-            participant=client, cagnote=cagnote, montant=montant)
+        participation = ParticipantsCagnote(
+            participant=client, cagnote=cagnote, montant=montant, nbre_modification=1)
         participation.save()
 
-        transfert = Transfert_Cagnote(
+        transfert = TransfertCagnote(
             expediteur=client.id,
             destinataire=cagnote.id,
-            type_transaction=Transfert_Cagnote.CAGNOTE,
+            type_transaction=TransfertCagnote.CAGNOTE,
             status=TransactionModel.COMFIRMED,
             montant=montant,
         )
@@ -282,10 +282,11 @@ def participer_cagnote(client, cagnote, montant):
 
 
 def update_participation_cagnote(client, cagnote, montant):
-    participation = Participants_Cagnote.objects.filter(
+    participation = ParticipantsCagnote.objects.filter(
         participant=client, cagnote=cagnote)
-    transfert = Transfert_Cagnote.objects.filter(
-        expediteur=client.id, destinataire=cagnote.id)
+    transfert = TransfertCagnote.objects.filter(
+        expediteur=client.id, destinataire=cagnote.id,
+        type_transaction=TransfertCagnote.CAGNOTE, status=TransactionModel.COMFIRMED)
     if len(participation) == 0 or len(transfert) == 0:
         return {'msg': "Pas de participation fait par ce compte utilisateur !"}
     else:
@@ -305,6 +306,7 @@ def update_participation_cagnote(client, cagnote, montant):
         transfert.save()
 
         participation.montant = montant
+        participation.nbre_modification += 1
         participation.save()
 
         result = {}
@@ -318,10 +320,19 @@ def update_participation_cagnote(client, cagnote, montant):
 
 
 def cloturer_cagnote(beneficiaire, cagnote):
-    transfert = Transfert_Cagnote(
+    if not cagnote.actif or cagnote.archive or cagnote.verse_au_solde:
+        return {'msg': "Cette cagnotte n'est plus actif ou archivé !"}
+
+    if cagnote.solde == 0:
+        return {'msg': "le solde de la cagnotte est vide !"}
+
+    if cagnote.nbre_participants < 3:
+        return {'msg': "Minimum 3 participants pour la cloture !"}
+
+    transfert = TransfertCagnote(
         expediteur=cagnote.id,
         destinataire=beneficiaire.id,
-        type_transaction=Transfert_Cagnote.RECOLTE,
+        type_transaction=TransfertCagnote.RECOLTE,
         status=TransactionModel.COMFIRMED,
         montant=cagnote.solde,
     )
@@ -338,7 +349,7 @@ def cloturer_cagnote(beneficiaire, cagnote):
     cagnote.verse_au_solde = True
     cagnote.save()
 
-    temp = Client_DigiPay.objects.get(id=cagnote.responsable.id)
+    temp = ClientDigiPay.objects.get(id=cagnote.responsable.id)
     msgClient = Notification(
         user=beneficiaire, transaction=transfert, status=Notification.CAGNOTE,
         message="Vous avez reçu une recolte de cagnotte de " + str(transfert.montant) + " MRU créer par " + temp.name + ' (' + temp.tel+')')
@@ -346,7 +357,7 @@ def cloturer_cagnote(beneficiaire, cagnote):
 
     result = {}
     result['cagnote'] = CagnoteFullSerializer(cagnote).data
-    participation = Participants_Cagnote.objects.filter(
+    participation = ParticipantsCagnote.objects.filter(
         participant=cagnote.responsable, cagnote=cagnote)
 
     if len(list(participation)) != 0:
@@ -356,3 +367,79 @@ def cloturer_cagnote(beneficiaire, cagnote):
         result['participation'] = None
 
     return result
+
+
+def supprimer_cagnote(cagnote):
+    # participations_list = ParticipantsCagnote.objects.filter(cagnote=cagnote) #  ???
+    transferts_list = TransfertCagnote.objects.filter(
+        destinataire=cagnote.id, status=TransactionModel.COMFIRMED,
+        type_transaction=TransfertCagnote.CAGNOTE)
+
+    for prev in transferts_list:
+        client = ClientDigiPay.objects.get(id=prev.expediteur)
+        payback = TransfertCagnote(
+            expediteur=cagnote.id,
+            destinataire=client.id,
+            type_transaction=TransfertCagnote.CAGNOTE_ANNULE,  # ???
+            status=TransactionModel.COMFIRMED,
+            montant=prev.montant,
+        )
+        payback.save()
+
+        payback_transaction = Transaction(
+            transaction=payback, type_transaction=Transaction.CAGNOTE_ANNULE, date=payback.date_creation)  # ??
+        payback_transaction.save()
+
+        client.solde += prev.montant
+        client.save()
+
+        prev.status = TransactionModel.CANCELED
+        prev.save()
+
+    cagnote.archive = True
+    cagnote.save()
+
+    result = {}
+    result['cagnote'] = CagnoteFullSerializer(cagnote).data
+    ma_participation = ParticipantsCagnote.objects.filter(
+        participant=cagnote.responsable, cagnote=cagnote)
+
+    if len(list(ma_participation)) != 0:
+        result['participation'] = {
+            'montant': ma_participation[0].montant, 'date': ma_participation[0].date.strftime('%d-%m-%Y %H:%M:%S')}
+    else:
+        result['participation'] = None
+
+    return result
+
+# somelec actions
+
+
+def paiement_somelec(client, facturier, data):
+    if client.solde >= data['montant']:
+        transfert = TransfertDirect(
+            expediteur=client,
+            destinataire=facturier,
+            status=TransactionModel.COMFIRMED,
+            montant=data['montant'],
+            libele=data['reference'],
+            remarque=data['libele'])
+        transfert.save()
+
+        transaction = Transaction(
+            transaction=transfert, type_transaction=Transaction.PAIEMENT_FACTURE, date=transfert.date_creation)
+        transaction.save()
+
+        result = TransactionFullSerializer(transaction).data
+        result['transaction'] = TransfertDirectFullSerializer(
+            transfert).data
+
+        client.solde -= data['montant']
+        client.save()
+
+        facturier.solde += data['montant']
+        facturier.save()
+
+        return result
+    else:
+        return {'msg': "Votre solde est insuffisant pour effectuer cette opération"}

@@ -1,4 +1,4 @@
-from users.models import TransactionModel, Transfert, Transaction, Client_DigiPay, MyUser, Vendor, Client, Pre_Transaction, Notification, Transfert_Direct
+from users.models import TransactionModel, Transfert, Transaction, ClientDigiPay, MyUser, Vendor, Client, PreTransaction, Notification, TransfertDirect
 from api.models import Agence
 from api.serializers import TransactionFullSerializer, TransfertFullSerializer, NotificationSerializer
 from users.serializers import TransfertDirectFullSerializer
@@ -8,14 +8,14 @@ from api.utils import random_code
 
 
 def code_payement(vendor, montant, livraison, libele, delai):
-    codes_list = [item.code_secret for item in Pre_Transaction.objects.all()]
+    codes_list = [item.code_secret for item in PreTransaction.objects.all()]
     code_confirmation = random_code(4, codes_list)
 
     if not livraison:
-        pre_transaction = Pre_Transaction(
+        pre_transaction = PreTransaction(
             expediteur=vendor,
             status=TransactionModel.TO_VALIDATE,
-            type_transaction=Pre_Transaction.PAIEMENT,
+            type_transaction=PreTransaction.PAIEMENT,
             montant=montant,
             code_secret=code_confirmation,
             livraison=livraison,
@@ -24,10 +24,10 @@ def code_payement(vendor, montant, livraison, libele, delai):
         pre_transaction.save()
     else:
         #delai = datetime.now() + timedelta(days=delai)
-        pre_transaction = Pre_Transaction(
+        pre_transaction = PreTransaction(
             expediteur=vendor,
             status=TransactionModel.TO_VALIDATE,
-            type_transaction=Pre_Transaction.PAIEMENT,
+            type_transaction=PreTransaction.PAIEMENT,
             montant=montant,
             code_secret=code_confirmation,
             livraison=livraison,
@@ -49,9 +49,9 @@ def code_payement(vendor, montant, livraison, libele, delai):
 
 def confirmer_livraison_client(transactionId):
     transaction = Transaction.objects.get(id=transactionId)
-    transfert = Transfert_Direct.objects.get(id=transaction.transaction.id)
+    transfert = TransfertDirect.objects.get(id=transaction.transaction.id)
     commercant = Vendor.objects.get(id=transfert.destinataire.id)
-    client = Client_DigiPay.objects.get(id=transfert.expediteur.id)
+    client = ClientDigiPay.objects.get(id=transfert.expediteur.id)
 
     client.on_hold -= transfert.montant
     client.save()
@@ -71,7 +71,7 @@ def confirmer_livraison_client(transactionId):
 
 def confirmer_livraison_vendor(transactionId):
     transaction = Transaction.objects.get(id=transactionId)
-    transfert = Transfert_Direct.objects.get(id=transaction.transaction.id)
+    transfert = TransfertDirect.objects.get(id=transaction.transaction.id)
     commercant = Vendor.objects.get(id=transfert.destinataire.id)
     commercant_client = Vendor.objects.get(id=transfert.expediteur.id)
 
@@ -93,8 +93,8 @@ def confirmer_livraison_vendor(transactionId):
 
 def annuler_livraison_client(transactionId):
     transaction = Transaction.objects.get(id=transactionId)
-    transfert = Transfert_Direct.objects.get(id=transaction.transaction.id)
-    client = Client_DigiPay.objects.get(id=transfert.expediteur.id)
+    transfert = TransfertDirect.objects.get(id=transaction.transaction.id)
+    client = ClientDigiPay.objects.get(id=transfert.expediteur.id)
 
     client.on_hold -= transfert.montant
     client.solde += transfert.montant
@@ -112,7 +112,7 @@ def annuler_livraison_client(transactionId):
 
 def annuler_livraison_vendor(transactionId):
     transaction = Transaction.objects.get(id=transactionId)
-    transfert = Transfert_Direct.objects.get(id=transaction.transaction.id)
+    transfert = TransfertDirect.objects.get(id=transaction.transaction.id)
     commercant_client = Vendor.objects.get(id=transfert.expediteur.id)
 
     commercant_client.on_hold -= transfert.montant
@@ -131,7 +131,7 @@ def annuler_livraison_vendor(transactionId):
 
 def fast_payement(commercant_client, commercant, montant, libele):
     if commercant_client.solde >= montant:
-        transfert = Transfert_Direct(
+        transfert = TransfertDirect(
             expediteur=commercant_client,
             destinataire=commercant,
             status=TransactionModel.COMFIRMED,
@@ -171,12 +171,12 @@ def fast_payement(commercant_client, commercant, montant, libele):
 
 
 def payement(commercant_client, pre_transactionId):
-    pre_transaction = Pre_Transaction.objects.get(id=pre_transactionId)
+    pre_transaction = PreTransaction.objects.get(id=pre_transactionId)
     commercant = Vendor.objects.get(id=pre_transaction.expediteur.id)
 
     if commercant_client.solde >= pre_transaction.montant:
         if not pre_transaction.livraison:
-            transfert = Transfert_Direct(
+            transfert = TransfertDirect(
                 expediteur=commercant_client,
                 destinataire=commercant,
                 status=TransactionModel.COMFIRMED,
@@ -216,9 +216,9 @@ def payement(commercant_client, pre_transactionId):
             return result
         else:
             codes_list = [
-                item.code_secret for item in Pre_Transaction.objects.all()]
+                item.code_secret for item in PreTransaction.objects.all()]
             code_confirmation = random_code(4, codes_list)
-            transfert = Transfert_Direct(
+            transfert = TransfertDirect(
                 expediteur=commercant_client,
                 destinataire=commercant,
                 status=TransactionModel.TO_VALIDATE,
@@ -238,7 +238,7 @@ def payement(commercant_client, pre_transactionId):
                 transfert).data
 
             # notifications
-            '''
+
             msgClient = Notification(
                 user=commercant_client, transaction=transfert, status=Notification.PAIEMENT,
                 message="Vous avez effectué un paiement de " + str(pre_transaction.montant) + " MRU au commerçant " + commercant.name + ' (' + commercant.tel+'). Merci de fournir le code livraison '+transfert.code_secret)
@@ -248,7 +248,6 @@ def payement(commercant_client, pre_transactionId):
                 user=commercant, transaction=transfert, status=Notification.PAIEMENT,
                 message="Vous avez reçu un paiement de " + str(pre_transaction.montant) + " MRU du commerçant " + commercant_client.name + ' (' + commercant_client.tel+') . Merci de confirmer la livraison')
             msgCommercant.save()
-            '''
 
             commercant_client.on_hold += pre_transaction.montant
             commercant_client.solde -= pre_transaction.montant
@@ -262,10 +261,10 @@ def payement(commercant_client, pre_transactionId):
 
 def remboursement(vendor, transactionId):
     prev_transaction = Transaction.objects.get(id=transactionId)
-    prev_transfert = Transfert_Direct.objects.get(
+    prev_transfert = TransfertDirect.objects.get(
         id=prev_transaction.transaction.id)
     ###
-    list_client = list(Client_DigiPay.objects.filter(
+    list_client = list(ClientDigiPay.objects.filter(
         id=prev_transfert.expediteur.id))
     list_vendor = list(Vendor.objects.filter(id=prev_transfert.expediteur.id))
     if len(list_client) != 0:
@@ -276,7 +275,7 @@ def remboursement(vendor, transactionId):
         return {'msg': "Type d'utilisateur invalid !"}
 
     if vendor.solde >= prev_transfert.montant:
-        transfert = Transfert_Direct(
+        transfert = TransfertDirect(
             expediteur=vendor,
             destinataire=receiver,
             status=TransactionModel.COMFIRMED,

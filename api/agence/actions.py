@@ -1,24 +1,56 @@
-from users.models import TransactionModel, Transfert, Transaction, Client_DigiPay, MyUser, Vendor, Client, Pre_Transaction, Compensation, Notification
+from users.models import TransactionModel, Transfert, Transaction, ClientDigiPay, MyUser, Vendor, Client, PreTransaction, Compensation, Notification
 from api.models import Agence
 from api.serializers import TransactionFullSerializer, TransfertFullSerializer
 
 
+def transfert_digiPay(agence, data, sender):
+    client_fictif = Client.objects.get(id=data['destinataireInfo']['id'])
+    destinataire = ClientDigiPay.objects.get(client=client_fictif.id)
+
+    transfert = Transfert(agence_origine=agence,
+                          agence_destination=agence,
+                          expediteur=sender,
+                          destinataire=client_fictif,
+                          categorie_transaction=data['categorie_transaction'],
+                          status=TransactionModel.COMFIRMED,
+                          montant=data['montant'],
+                          remarque=data['remarque'])
+    transfert.save()
+
+    transaction = Transaction(transaction=transfert, type_transaction=Transaction.TRANSFERT,
+                              date=transfert.date_creation, categorie_transaction=transfert.categorie_transaction)
+    transaction.save()
+
+    destinataire.solde += transfert.montant
+    destinataire.save()
+
+    agence.solde += transfert.montant
+    agence.save()
+
+    result = TransactionFullSerializer(transaction).data
+    result['transaction'] = TransfertFullSerializer(transfert).data
+
+    return result
+
+
 def transfert(agence_origine, data):
-    agence_destination = Agence.objects.get(id=data['agence_destination'])
-
-    if data['destinataireInfo']['digipay']:
-        return {'msg': "L'envoie vers un compte un digipay n'est pas disponible pour le moment ..."}
-    destinataire = Client.objects.get(id=data['destinataireInfo']['id'])
-
     expediteur = None
     if data['expediteurInfo']:
-        # if data['expediteurInfo']['digipay']:
-        #    return {'msg': "Nous vous conseillons d'utiliser l'application mobile digiPay !"}
-        # else:
+        if data['expediteurInfo']['digipay']:
+            return {'msg': "Nous vous conseillons d'utiliser l'application mobile digiPay !"}
+
         if data['expediteurInfo']['id'] == data['destinataireInfo']['id']:
+            # check in front side too
             return {'msg': "L'expéditeur doit être différent du destinataire !"}
 
         expediteur = data['expediteurInfo']['id']
+
+    if data['destinataireInfo']['digipay']:
+        # return {'msg': "L'envoie vers un compte un digipay n'est pas disponible pour le moment ..."}
+        return transfert_digiPay(agence_origine, data, expediteur)
+
+    agence_destination = Agence.objects.get(id=data['agence_destination'])
+    destinataire = Client.objects.get(id=data['destinataireInfo']['id'])
 
     transfert = Transfert(agence_origine=agence_origine,
                           agence_destination=agence_destination,
@@ -27,8 +59,8 @@ def transfert(agence_origine, data):
                           categorie_transaction=data['categorie_transaction'],
                           status=TransactionModel.NOT_WITHDRAWED,
                           montant=data['montant'],
-                          frais_origine=data['frais_origine'],
-                          frais_destination=data['frais_destination'],
+                          # frais_origine=data['frais_origine'],
+                          # frais_destination=data['frais_destination'],
                           remarque=data['remarque'])
     transfert.save()
     ##
@@ -44,11 +76,7 @@ def transfert(agence_origine, data):
     result = TransactionFullSerializer(transaction).data
     result['transaction'] = TransfertFullSerializer(transfert).data
 
-    # print(' result ', result)
     return result
-
-    # else:
-    # return {'msg': "le solde de l'agence est insuffisant pour effectuer cette opération"}
 
 
 def retrait(agence_destination, data):
@@ -83,7 +111,7 @@ def recharge(agence, receiver, montant):
     # agence = Agence.objects.get(id=data['agence'])
 
     if receiver['role'] == MyUser.CLIENT:
-        destinataire = Client_DigiPay.objects.get(id=receiver['id'])
+        destinataire = ClientDigiPay.objects.get(id=receiver['id'])
     elif receiver['role'] == MyUser.VENDOR:
         destinataire = Vendor.objects.get(id=receiver['id'])
     else:
@@ -96,9 +124,7 @@ def recharge(agence, receiver, montant):
                           destinataire=client_fictif,
                           categorie_transaction=categorie,
                           status=TransactionModel.COMFIRMED,
-                          montant=montant,
-                          frais_origine=0,
-                          frais_destination=0,)
+                          montant=montant,)
     transfert.save()
 
     transaction = Transaction(transaction=transfert, type_transaction=Transaction.RECHARGE,
@@ -114,17 +140,6 @@ def recharge(agence, receiver, montant):
     result = TransactionFullSerializer(transaction).data
     result['transaction'] = TransfertFullSerializer(transfert).data
 
-    '''
-    T = Transaction.objects.create(
-        sender=self,
-        type="RECHARGE",
-        receiver=destinataire,
-        etat="VALIDE",
-        montant=montant,
-        num_transaction=int(time.time()))
-    T.save()
-    '''
-
     # conntentAgence = "Vous avez rechargé " + str(montant) + " pour le client dont numéro est : " + destinataire.user.username
     # conntentClient = "Vous avez rechargé votre compte d'un montant  de " + str(montant) + " MRU "
 
@@ -136,8 +151,8 @@ def recharge(agence, receiver, montant):
 
 def retrait_par_code(agence, pre_transactionId):
     # client et vendor
-    pre_transaction = Pre_Transaction.objects.get(id=pre_transactionId)
-    client = list(Client_DigiPay.objects.filter(
+    pre_transaction = PreTransaction.objects.get(id=pre_transactionId)
+    client = list(ClientDigiPay.objects.filter(
         id=pre_transaction.expediteur.id))
     vendor = list(Vendor.objects.filter(id=pre_transaction.expediteur.id))
 
@@ -173,7 +188,7 @@ def retrait_par_code(agence, pre_transactionId):
         result = TransactionFullSerializer(transaction).data
         result['transaction'] = TransfertFullSerializer(transfert).data
 
-        #pre_transaction.status = TransactionModel.COMFIRMED
+        # pre_transaction.status = TransactionModel.COMFIRMED
         pre_transaction.delete()
         return result
     else:

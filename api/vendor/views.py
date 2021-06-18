@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.decorators import api_view, permission_classes
 from api.serializers import TransactionFullSerializer
 from users.serializers import PreTransactionFullSerializer, TransfertDirectFullSerializer, Vendor_UserSerializer
-from users.models import Client_DigiPay, Vendor, MyUser, Pre_Transaction, TransactionModel, Transaction, Transfert_Direct
+from users.models import ClientDigiPay, Vendor, MyUser, PreTransaction, TransactionModel, Transaction, TransfertDirect
 from api.models import Agence
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.http import JsonResponse, HttpResponse
@@ -32,8 +32,8 @@ def check_codePayement_vendor(request):
     if request.method == 'POST':
         data = json.loads(request.body.decode('utf-8'))
         try:
-            pre_transaction = Pre_Transaction.objects.filter(
-                code_secret=data['code'], status=TransactionModel.TO_VALIDATE, type_transaction=Pre_Transaction.PAIEMENT)
+            pre_transaction = PreTransaction.objects.filter(
+                code_secret=data['code'], status=TransactionModel.TO_VALIDATE, type_transaction=PreTransaction.PAIEMENT)
             if len(list(pre_transaction)) != 0:
                 if pre_transaction[0].expediteur.id != data['vendorId']:
                     # if not pre_transaction[0].livraison:
@@ -116,7 +116,7 @@ def check_codeTransaction(request):
             # valider le num de la transaction et l'auteur de la transaction
             transaction = [
                 item for item in transaction if item.code_transaction == data['numero_transaction'] and
-                Transfert_Direct.objects.get(id=item.transaction.id).destinataire == vendor]
+                TransfertDirect.objects.get(id=item.transaction.id).destinataire == vendor]
             # transaction
             if len(transaction) == 0:
                 # todo handle msg by case
@@ -125,7 +125,7 @@ def check_codeTransaction(request):
                 transaction = transaction[0]
 
             result = TransactionFullSerializer(transaction).data
-            transfert = Transfert_Direct.objects.get(
+            transfert = TransfertDirect.objects.get(
                 id=transaction.transaction.id)
             result['transaction'] = TransfertDirectFullSerializer(
                 transfert).data

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django import forms
-from .models import MyUser, Responsable, Agent, Employee, Agent, Transaction, Transfert, Compensation, Client, Client_DigiPay, Vendor, Notification, Transfert_Direct, Pre_Transaction
-from .models import Cagnote, Participants_Cagnote, Transfert_Cagnote, Group_Payement, Beneficiares_GrpPayement, SysAdmin
+from .models import MyUser, Responsable, Agent, Employee, Agent, Transaction, Transfert, Compensation, Client, ClientDigiPay, Vendor, Notification, TransfertDirect, PreTransaction
+from .models import Cagnote, ParticipantsCagnote, TransfertCagnote, GroupPayement, BeneficiaresGrpPayement, SysAdmin, Facturier, ServicesInterFacturier, CreditManager
 from api.models import Agence, Commune
 from django.contrib.auth.models import Group
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
@@ -21,19 +21,22 @@ admin.site.register(Transfert)
 admin.site.register(Compensation)
 
 admin.site.register(Client)
-admin.site.register(Client_DigiPay)
+admin.site.register(ClientDigiPay)
 admin.site.register(Vendor)
+admin.site.register(Facturier)
+admin.site.register(CreditManager)
+admin.site.register(ServicesInterFacturier)
 
 admin.site.register(Notification)
-admin.site.register(Pre_Transaction)
-admin.site.register(Transfert_Direct)
+admin.site.register(PreTransaction)
+admin.site.register(TransfertDirect)
 
 admin.site.register(Cagnote)
-admin.site.register(Participants_Cagnote)
-admin.site.register(Transfert_Cagnote)
+admin.site.register(ParticipantsCagnote)
+admin.site.register(TransfertCagnote)
 
-admin.site.register(Group_Payement)
-admin.site.register(Beneficiares_GrpPayement)
+admin.site.register(GroupPayement)
+admin.site.register(BeneficiaresGrpPayement)
 
 '''
 class UserCreationForm(forms.ModelForm):

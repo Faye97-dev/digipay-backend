@@ -52,6 +52,8 @@ class MyUser(AbstractBaseUser, PermissionsMixin):
     AGENT_COMPENSATION = 'AGENT_COMPENSATION'
     CLIENT = 'CLIENT'
     VENDOR = 'VENDOR'
+    FACTURIER = 'FACTURIER'
+    CREDIT_MANAGER = 'CREDIT_MANAGER'
 
     ROLES = [
         (SYSADMIN, SYSADMIN),
@@ -59,7 +61,9 @@ class MyUser(AbstractBaseUser, PermissionsMixin):
         (RESPONSABLE_AGENCE, RESPONSABLE_AGENCE),
         (AGENT_COMPENSATION, AGENT_COMPENSATION),
         (CLIENT, CLIENT),
-        (VENDOR, VENDOR)
+        (VENDOR, VENDOR),
+        (FACTURIER, FACTURIER),
+        (CREDIT_MANAGER, CREDIT_MANAGER)
     ]
 
     username = models.CharField(max_length=150, unique=True)
@@ -93,7 +97,7 @@ class MyUser(AbstractBaseUser, PermissionsMixin):
         return self.username
 
     class Meta:
-        db_table = "model_user"
+        db_table = "my_user"
 
 
 class Employee(MyUser, PermissionsMixin):
@@ -113,7 +117,7 @@ class Employee(MyUser, PermissionsMixin):
     REQUIRED_FIELDS = ['first_name', 'last_name', 'role']
 
     class Meta:
-        db_table = "employe"
+        db_table = "employee"
 
 
 class Agent(MyUser, PermissionsMixin):
@@ -151,7 +155,7 @@ class SysAdmin(MyUser, PermissionsMixin):
     REQUIRED_FIELDS = ['first_name', 'last_name', 'role']
 
     class Meta:
-        db_table = "sysadmin"
+        db_table = "sys_admin"
 
 
 class Responsable(MyUser, PermissionsMixin):
@@ -174,7 +178,7 @@ class Responsable(MyUser, PermissionsMixin):
         db_table = "responsable"
 
 
-class Client_DigiPay(MyUser, PermissionsMixin):
+class ClientDigiPay(MyUser, PermissionsMixin):
     #date_naissance = models.CharField(max_length=50, blank=True, null=True)
     #identifiant = models.CharField(max_length=15, null=True, unique=True)
     tel = models.CharField(max_length=50, blank=True, unique=True)
@@ -182,7 +186,7 @@ class Client_DigiPay(MyUser, PermissionsMixin):
     adresse = models.CharField(max_length=100, null=True, blank=True)
     solde = models.FloatField(default=0.0)
     on_hold = models.FloatField(default=0.0)
-    client = models.IntegerField(null=True)
+    client = models.IntegerField(null=True, unique=True)
 
     ###
     valide_en_agence = models.BooleanField(default=False)
@@ -200,14 +204,14 @@ class Client_DigiPay(MyUser, PermissionsMixin):
     REQUIRED_FIELDS = ['first_name', 'last_name', 'role', 'tel']
 
     def envoyer(self, clientId, montant):
-        Client = Client_DigiPay.objects.get(id=clientId)
+        Client = ClientDigiPay.objects.get(id=clientId)
         if self.solde >= montant:
             self.solde -= montant
             self.save()
             Client.solde += montant
             Client.save()
 
-            transfert = Transfert_Direct(
+            transfert = TransfertDirect(
                 expediteur=self,
                 destinataire=Client,
                 status=TransactionModel.COMFIRMED,
@@ -242,14 +246,14 @@ class Client_DigiPay(MyUser, PermissionsMixin):
     def envoyer_par_sms(self, tel, montant):
         if self.solde >= montant:
             codes_list = [
-                item.code_secret for item in Pre_Transaction.objects.all()]
+                item.code_secret for item in PreTransaction.objects.all()]
             code_confirmation = random_code(4, codes_list)
             # str(uuid.uuid4().hex[:8].upper())
-            pre_transaction = Pre_Transaction(
+            pre_transaction = PreTransaction(
                 expediteur=self,
                 destinataire=tel,
                 status=TransactionModel.TO_VALIDATE,
-                type_transaction=Pre_Transaction.RETRAIT,
+                type_transaction=PreTransaction.RETRAIT,
                 montant=montant,
                 code_secret=code_confirmation)
             pre_transaction.save()
@@ -267,7 +271,7 @@ class Client_DigiPay(MyUser, PermissionsMixin):
             return {'msg': "Votre solde est insuffisant pour effectuer cette opération"}
 
     class Meta:
-        db_table = "client_digiPay"
+        db_table = "client_digi_pay"
 
 
 class Vendor(MyUser, PermissionsMixin):
@@ -275,7 +279,7 @@ class Vendor(MyUser, PermissionsMixin):
     email = models.EmailField(null=True, blank=True)
     adresse = models.CharField(max_length=100, null=True, blank=True)
     solde = models.FloatField(default=0.0)
-    client = models.IntegerField(null=True)
+    client = models.IntegerField(null=True, unique=True)
     on_hold = models.FloatField(default=0.0)
     myId = models.CharField(unique=True, max_length=5, blank=True)
 
@@ -291,6 +295,87 @@ class Vendor(MyUser, PermissionsMixin):
     class Meta:
         db_table = "vendor"
 
+
+class Facturier(MyUser, PermissionsMixin):
+    #tel = models.CharField(max_length=50, blank=True, unique=True)
+
+    email = models.EmailField(null=True, blank=True)
+    adresse = models.CharField(max_length=100, null=True, blank=True)
+    solde = models.FloatField(default=0.0)
+
+    #client = models.IntegerField(null=True, unique=True)
+    #on_hold = models.FloatField(default=0.0)
+    #myId = models.CharField(unique=True, max_length=5, blank=True)
+
+    @property
+    def name(self):
+        return self.first_name
+
+    objects = CustomAccountManager()
+
+    USERNAME_FIELD = 'username'
+    REQUIRED_FIELDS = ['first_name', 'role']
+
+    class Meta:
+        db_table = "facturier"
+
+
+'''
+class DigiPayServices(models.Model):
+    nom = models.CharField(max_length=50, blank=True, null=True)
+    nom_ar = models.CharField(max_length=50, blank=True, null=True)
+    couleur = models.CharField(max_length=20, blank=True, null=True)
+
+    class Meta:
+        db_table = "digi_pay_services"
+'''
+
+
+class ServicesInterFacturier(models.Model):
+    Electricte = 'Électricité'
+    Eau = 'Eau'
+    Internet = 'Internet'
+    Chaines = 'Chaines'
+
+    SERVICES = [
+        (Electricte, Electricte),
+        (Eau, Eau),
+        (Internet, Internet),
+        (Chaines, Chaines)
+    ]
+
+    service = models.CharField(
+        max_length=50,
+        choices=SERVICES,
+    )
+    user = models.ForeignKey(MyUser, on_delete=models.CASCADE)
+    #service = models.ForeignKey(DigiPayServices, on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = "services_inter_facturier"
+
+
+class CreditManager(MyUser, PermissionsMixin):
+    tel = models.CharField(max_length=50, blank=True, unique=True)
+    email = models.EmailField(null=True, blank=True)
+    adresse = models.CharField(max_length=100, null=True, blank=True)
+    solde = models.FloatField(default=0.0)
+
+    #client = models.IntegerField(null=True, unique=True)
+    #on_hold = models.FloatField(default=0.0)
+    #myId = models.CharField(unique=True, max_length=5, blank=True)
+
+    @property
+    def name(self):
+        return self.first_name
+
+    objects = CustomAccountManager()
+
+    USERNAME_FIELD = 'username'
+    REQUIRED_FIELDS = ['first_name', 'role', 'tel']
+
+    class Meta:
+        db_table = "credit_manager"
 #####################################################################################
 
 
@@ -319,11 +404,12 @@ class Cagnote(models.Model):
     motif = models.CharField(max_length=200, blank=True, null=True)
     actif = models.BooleanField(default=True)
     verse_au_solde = models.BooleanField(default=False)
+    archive = models.BooleanField(default=False)
     date = models.DateTimeField(auto_now_add=True, null=True)
 
     @property
     def nbre_participants(self):
-        return len(Participants_Cagnote.objects.filter(cagnote=self))
+        return len(ParticipantsCagnote.objects.filter(cagnote=self))
 
     @property
     def numero_cagnote(self):
@@ -332,19 +418,22 @@ class Cagnote(models.Model):
     class Meta:
         db_table = "cagnote"
 
+# penalite d'annulation
 
-class Participants_Cagnote(models.Model):
+
+class ParticipantsCagnote(models.Model):
     cagnote = models.ForeignKey(Cagnote, on_delete=models.CASCADE)
     participant = models.ForeignKey(MyUser, on_delete=models.CASCADE)
     montant = models.FloatField(default=0.0)
     motif = models.CharField(max_length=200, blank=True, null=True)
     date = models.DateTimeField(auto_now_add=True, null=True)
+    nbre_modification = models.IntegerField(default=0)
 
     class Meta:
-        db_table = "participant_cagnote"
+        db_table = "participants_cagnote"
 
 
-class Group_Payement(models.Model):
+class GroupPayement(models.Model):
     nom = models.CharField(max_length=100)
     responsable = models.ForeignKey(MyUser, on_delete=models.CASCADE)
     date = models.DateTimeField(auto_now_add=True, null=True)
@@ -352,25 +441,25 @@ class Group_Payement(models.Model):
 
     @property
     def nbre_beneficiaires(self):
-        return len(Beneficiares_GrpPayement.objects.filter(grp_payement=self))
+        return len(BeneficiaresGrpPayement.objects.filter(grp_payement=self))
 
     @property
     def total_montant(self):
-        return Beneficiares_GrpPayement.objects.filter(grp_payement=self).aggregate(Sum('montant'))['montant__sum'] or 0
+        return BeneficiaresGrpPayement.objects.filter(grp_payement=self).aggregate(Sum('montant'))['montant__sum'] or 0
 
     class Meta:
         db_table = "group_payement"
 
 
-class Beneficiares_GrpPayement(models.Model):
-    grp_payement = models.ForeignKey(Group_Payement, on_delete=models.CASCADE)
+class BeneficiaresGrpPayement(models.Model):
+    grp_payement = models.ForeignKey(GroupPayement, on_delete=models.CASCADE)
     beneficiaire = models.ForeignKey(MyUser, on_delete=models.CASCADE)
     montant = models.FloatField(default=0.0)
     motif = models.CharField(max_length=200, blank=True, null=True)
     date = models.DateTimeField(auto_now_add=True, null=True)
 
     class Meta:
-        db_table = "beneficiaires_group_payement"
+        db_table = "beneficiares_grp_payement"
 
 
 class TransactionModel(models.Model):
@@ -465,7 +554,7 @@ class Transfert(TransactionModel):
 
 
 # Pre-transactions
-class Pre_Transaction(TransactionModel):
+class PreTransaction(TransactionModel):
     PAIEMENT = 'PAIEMENT'
     RETRAIT = 'RETRAIT'
     TYPES = [
@@ -485,7 +574,7 @@ class Pre_Transaction(TransactionModel):
     livraison = models.BooleanField(default=False)
 
     def client_retrait(self, agenceId, nom_destinataire):
-        expediteur = Client_DigiPay.objects.get(id=self.expediteur.id)
+        expediteur = ClientDigiPay.objects.get(id=self.expediteur.id)
         agence_destination = Agence.objects.get(id=agenceId)
         ###
         if expediteur.solde >= self.montant:
@@ -535,10 +624,10 @@ class Pre_Transaction(TransactionModel):
             return {'msg': "le solde du client est insuffisant pour effectuer cette opération"}
 
     class Meta:
-        db_table = "pre_transactions"
+        db_table = "pre_transaction"
 
 
-class Transfert_Direct(TransactionModel):
+class TransfertDirect(TransactionModel):
 
     expediteur = models.ForeignKey(
         MyUser, related_name='transferts_direct_envoyes', on_delete=models.CASCADE)
@@ -561,12 +650,14 @@ class Transfert_Direct(TransactionModel):
         db_table = "transfert_direct"
 
 
-class Transfert_Cagnote(TransactionModel):
+class TransfertCagnote(TransactionModel):
     CAGNOTE = 'CAGNOTE'
     RECOLTE = 'RECOLTE'
+    CAGNOTE_ANNULE = 'CAGNOTE_ANNULE'
     TYPES = [
         (CAGNOTE, 'CAGNOTE'),
         (RECOLTE, 'RECOLTE'),
+        (CAGNOTE_ANNULE, 'CAGNOTE_ANNULE')
     ]
     expediteur = models.IntegerField()
     destinataire = models.IntegerField()
@@ -590,6 +681,8 @@ class Notification(models.Model):
     ENVOI = 'ENVOI'
     RECHARGE = 'RECHARGE'
     CAGNOTE = 'CAGNOTTE'
+    PAIEMENT_FACTURE = 'PAIEMENT_FACTURE'
+    PAIEMENT_CREDIT = 'PAIEMENT_CREDIT'
     TAGS = ((DEMANDE_PAIEMENT, 'DEMANDE DE PAIEMENT'),
             (DEMANDE_RETRAIT, 'DEMANDE DE RETRAIT'),
             (DEMANDE_COMPENSATION, 'DEMANDE DE COMPENSATION'),
@@ -598,7 +691,10 @@ class Notification(models.Model):
             (PAIEMENT, 'PAIEMENT'),
             (ENVOI, 'ENVOI'),
             (RECHARGE, 'RECHARGE'),
-            (CAGNOTE, 'CAGNOTTE'))
+            (CAGNOTE, 'CAGNOTTE'),
+            (PAIEMENT_FACTURE, 'PAIEMENT_FACTURE'),
+            (PAIEMENT_CREDIT, 'PAIEMENT_CREDIT'),
+            )
     user = models.ForeignKey(MyUser, blank=True, on_delete=models.CASCADE)
     transaction = models.ForeignKey(TransactionModel, on_delete=models.CASCADE)
 
@@ -633,7 +729,10 @@ class Transaction(models.Model):
     REMBOURSEMENT = '08'
     CAGNOTE = '09'
     RECOLTE = '10'
+    CAGNOTE_ANNULE = '12'
     PAIEMENT_MASSE = '11'
+    PAIEMENT_FACTURE = '13'
+    PAIEMENT_CREDIT = '14'
     TYPES = [
         (TRANSFERT, 'TRANSFERT'),
         (RETRAIT, 'RETRAIT'),
@@ -649,6 +748,10 @@ class Transaction(models.Model):
         ###
         (CAGNOTE, 'CAGNOTE'),
         (RECOLTE, 'RECOLTE'),
+        (CAGNOTE_ANNULE, 'CAGNOTE_ANNULE'),
+        ###
+        (PAIEMENT_FACTURE, 'PAIEMENT_FACTURE'),
+        (PAIEMENT_CREDIT, 'PAIEMENT_CREDIT'),
 
     ]
 
@@ -708,7 +811,7 @@ class ClientDigiPay_UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(min_length=8, write_only=True)
 
     class Meta:
-        model = Client_DigiPay
+        model = ClientDigiPay
         fields = ('id', 'username', 'first_name', 'last_name',
                   'role', 'password', 'tel', 'email', 'adresse', 'solde', 'client', 'start_date', 'is_active', 'last_login')
         extra_kwargs = {'password': {'write_only': True},
@@ -736,13 +839,13 @@ class TransfertDirectFullSerializer(serializers.ModelSerializer):
     code_secret = serializers.CharField()
 
     class Meta:
-        model = Transfert_Direct
+        model = TransfertDirect
         fields = '__all__'
 
     def get_expediteur(self, instance):
         data = {}
         if instance.expediteur.role == MyUser.CLIENT:
-            client = Client_DigiPay.objects.get(id=instance.expediteur.id)
+            client = ClientDigiPay.objects.get(id=instance.expediteur.id)
             data = ClientDigiPay_UserSerializer(client).data
             return data
         elif instance.expediteur.role == MyUser.VENDOR:
@@ -755,7 +858,7 @@ class TransfertDirectFullSerializer(serializers.ModelSerializer):
     def get_destinataire(self, instance):
         data = {}
         if instance.destinataire.role == MyUser.CLIENT:
-            client = Client_DigiPay.objects.get(id=instance.destinataire.id)
+            client = ClientDigiPay.objects.get(id=instance.destinataire.id)
             data = ClientDigiPay_UserSerializer(client).data
             return data
         elif instance.destinataire.role == MyUser.VENDOR:

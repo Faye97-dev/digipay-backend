@@ -6,7 +6,8 @@ from rest_framework.views import APIView
 from .serializers import *
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from users.models import MyUser, Employee, Responsable
+from users.models import MyUser, Employee, Responsable, ServicesInterFacturier
+
 
 # login
 
@@ -108,7 +109,7 @@ class ClientDigiPay_UserCreate(APIView):
 class ClientDigiPayUpdateAPIViews(generics.RetrieveUpdateAPIView):
     serializer_class = CLientDigipay_ProfilSerializer
     permission_classes = [IsAuthenticated]
-    queryset = Client_DigiPay.objects.all()
+    queryset = ClientDigiPay.objects.all()
 
 
 class Vendor_UserCreate(APIView):
@@ -129,6 +130,59 @@ class VendorUpdateAPIViews(generics.RetrieveUpdateAPIView):
     serializer_class = Vendor_ProfilSerializer
     permission_classes = [IsAuthenticated]
     queryset = Vendor.objects.all()
+
+
+class FacturierUpdateAPIViews(generics.RetrieveUpdateAPIView):
+    serializer_class = Facturier_ProfilSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = Facturier.objects.all()
+
+
+class Facturier_UserCreate(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, format='json'):
+        serializer = Facturier_UserSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            if user:
+                json = serializer.data
+                return Response(json, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+def servicesListFacturierByUser(id_):
+    user = MyUser.objects.get(pk=id_)
+    if user.role == MyUser.FACTURIER:
+        res = ServicesInterFacturier.objects.filter(user=user)
+        return res
+    else:
+        return []
+
+
+class FacturierListAPIViews(generics.ListAPIView):
+    serializer_class = Facturier_ProfilSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Facturier.objects.all()
+
+    def list(self, request):
+        serializer = self.serializer_class(self.get_queryset(), many=True)
+
+        data = []
+        for d in serializer.data:
+            services_list = servicesListFacturierByUser(d['id'])
+            if len(services_list) > 1:
+                d['many'] = True
+            else:
+                d['many'] = False
+
+            d['services'] = ServicesInterFacturierSerializer(
+                services_list, many=True).data
+            data.append(d)
+
+        return Response(data)
 
 
 class EmployeFilter(filters.FilterSet):
@@ -166,7 +220,7 @@ class currentUserRetriveAPIViews(generics.RetrieveAPIView):
 
         elif self.request.user.role == MyUser.CLIENT:
             self.serializer_class = ClientDigiPay_UserSerializer
-            return Client_DigiPay.objects.get(pk=self.request.user.id)
+            return ClientDigiPay.objects.get(pk=self.request.user.id)
 
         elif self.request.user.role == MyUser.AGENT_COMPENSATION:
             self.serializer_class = Agent_UserSerializer
@@ -175,6 +229,10 @@ class currentUserRetriveAPIViews(generics.RetrieveAPIView):
         elif self.request.user.role == MyUser.SYSADMIN:
             self.serializer_class = SysAdmin_UserSerializer
             return SysAdmin.objects.get(pk=self.request.user.id)
+
+        elif self.request.user.role == MyUser.FACTURIER:
+            self.serializer_class = Facturier_UserSerializer
+            return Facturier.objects.get(pk=self.request.user.id)
 
         return {}
 

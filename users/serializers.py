@@ -1,8 +1,8 @@
 from django.forms.models import model_to_dict
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework import serializers, exceptions
-from users.models import MyUser, Agent, Employee, Responsable, Compensation, Client_DigiPay, Client, Vendor, Transfert_Direct, Pre_Transaction, SysAdmin
-from users.models import Cagnote, Participants_Cagnote, Transfert_Cagnote, Group_Payement, Beneficiares_GrpPayement
+from users.models import MyUser, Agent, Employee, Responsable, Compensation, ClientDigiPay, Client, Vendor, Facturier, TransfertDirect, PreTransaction, SysAdmin
+from users.models import Cagnote, ParticipantsCagnote, TransfertCagnote, GroupPayement, BeneficiaresGrpPayement, ServicesInterFacturier
 from api.models import Agence
 from api.serializers import AgenceSerializer, AgenceFullSerializer
 from .service import random_with_N_digits
@@ -152,7 +152,7 @@ class ClientDigiPay_UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(min_length=4, write_only=True)
 
     class Meta:
-        model = Client_DigiPay
+        model = ClientDigiPay
         fields = ('id', 'device_connecte', 'premium', 'username', 'first_name', 'last_name',
                   'role', 'password', 'tel', 'email', 'adresse', 'solde', "on_hold", 'client', 'start_date', 'is_active', 'last_login',
                   'date_naissance', 'identifiant', 'compte_banquaire')
@@ -162,9 +162,6 @@ class ClientDigiPay_UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         password = validated_data.pop('password', None)
         instance = self.Meta.model(**validated_data)
-
-        device_connecte = validated_data.pop('device_connecte', None)
-        print(device_connecte)
 
         if password is not None:
             instance.set_password(password)
@@ -181,7 +178,7 @@ class ClientDigiPay_UserSerializer(serializers.ModelSerializer):
 
 class CLientDigipay_ProfilSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Client_DigiPay
+        model = ClientDigiPay
         fields = ('id', 'username', 'first_name', 'role',
                   'last_name', 'tel', 'email', 'adresse')
 
@@ -234,6 +231,54 @@ class Vendor_ProfilSerializer(serializers.ModelSerializer):
                   'last_name', 'tel', 'email', 'adresse', 'myId')
 
 
+class Facturier_UserSerializer(serializers.ModelSerializer):
+    #tel = serializers.CharField(required=True)
+    first_name = serializers.CharField(required=True)
+    password = serializers.CharField(min_length=4, write_only=True)
+
+    class Meta:
+        model = Facturier
+        fields = ('id', 'username', 'first_name', 'last_name',
+                  'role', 'password', 'email', 'adresse', 'solde', 'start_date', 'is_active', 'last_login',
+                  'date_naissance', 'identifiant', 'compte_banquaire')
+        extra_kwargs = {'password': {'write_only': True},
+                        'id': {'read_only': True}, 'start_date': {'read_only': True}, 'last_login': {'read_only': True}}
+
+    def create(self, validated_data):
+        password = validated_data.pop('password', None)
+        instance = self.Meta.model(**validated_data)
+
+        # generate random username
+        if password is not None:
+            instance.set_password(password)
+        instance.save()
+
+        return instance
+
+
+class Facturier_ProfilSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Facturier
+        fields = ('id', 'username', 'first_name', 'role', 'date_naissance',
+                  'identifiant', 'compte_banquaire', 'email', 'adresse')
+
+
+'''
+class DigipayServicesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DigiPayServices
+        fields = '__all__'
+'''
+
+
+class ServicesInterFacturierSerializer(serializers.ModelSerializer):
+    #service = DigipayServicesSerializer()
+
+    class Meta:
+        model = ServicesInterFacturier
+        fields = ('id', 'service')
+
+
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     # login
     #name = serializers.CharField(required=False)
@@ -267,7 +312,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                             device_authorized = True
                             print("Web connexion mode !")
                     else:
-                        user = Client_DigiPay.objects.get(id=user.id)
+                        user = ClientDigiPay.objects.get(id=user.id)
                         if 'device_connecte' in request_data.keys():
                             if user.device_connecte:
                                 if user.device_connecte == request_data['device_connecte']:
@@ -371,10 +416,20 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                         "%d-%m-%Y %H:%M:%S") if data['start_date'] else data['start_date']
 
                 elif self.user.role == MyUser.CLIENT:
-                    client = Client_DigiPay.objects.get(id=self.user.id)
+                    client = ClientDigiPay.objects.get(id=self.user.id)
                     data.update(model_to_dict(client, fields=['id', 'username', 'premium', 'first_name', 'last_name',
                                                               'role', 'tel', 'solde', "on_hold", 'client', 'email', 'adresse', 'start_date', 'is_active', 'last_login',
                                                               'date_naissance', 'identifiant', 'compte_banquaire']))
+                    data['last_login'] = data['last_login'].strftime(
+                        "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
+                    data['start_date'] = data['start_date'].strftime(
+                        "%d-%m-%Y %H:%M:%S") if data['start_date'] else data['start_date']
+
+                elif self.user.role == MyUser.FACTURIER:
+                    service = Facturier.objects.get(id=self.user.id)
+                    data.update(model_to_dict(service, fields=['id', 'username', 'first_name', 'last_name',
+                                                               'role', 'solde', 'email', 'adresse', 'start_date', 'is_active', 'last_login',
+                                                               'date_naissance', 'identifiant', 'compte_banquaire']))
                     data['last_login'] = data['last_login'].strftime(
                         "%d-%m-%Y %H:%M:%S") if data['last_login'] else data['last_login']
                     data['start_date'] = data['start_date'].strftime(
@@ -417,18 +472,22 @@ class TransfertDirectFullSerializer(serializers.ModelSerializer):
     code_secret = serializers.CharField()
 
     class Meta:
-        model = Transfert_Direct
+        model = TransfertDirect
         fields = '__all__'
 
     def get_expediteur(self, instance):
         data = {}
         if instance.expediteur.role == MyUser.CLIENT:
-            client = Client_DigiPay.objects.get(id=instance.expediteur.id)
+            client = ClientDigiPay.objects.get(id=instance.expediteur.id)
             data = CLientDigipay_ProfilSerializer(client).data
             return data
         elif instance.expediteur.role == MyUser.VENDOR:
             vendor = Vendor.objects.get(id=instance.expediteur.id)
             data = Vendor_ProfilSerializer(vendor).data
+            return data
+        elif instance.destinataire.role == MyUser.FACTURIER:
+            vendor = Facturier.objects.get(id=instance.destinataire.id)
+            data = Facturier_ProfilSerializer(vendor).data
             return data
         else:
             return instance.expediteur.id
@@ -436,12 +495,16 @@ class TransfertDirectFullSerializer(serializers.ModelSerializer):
     def get_destinataire(self, instance):
         data = {}
         if instance.destinataire.role == MyUser.CLIENT:
-            client = Client_DigiPay.objects.get(id=instance.destinataire.id)
+            client = ClientDigiPay.objects.get(id=instance.destinataire.id)
             data = CLientDigipay_ProfilSerializer(client).data
             return data
         elif instance.destinataire.role == MyUser.VENDOR:
             vendor = Vendor.objects.get(id=instance.destinataire.id)
             data = Vendor_ProfilSerializer(vendor).data
+            return data
+        elif instance.destinataire.role == MyUser.FACTURIER:
+            vendor = Facturier.objects.get(id=instance.destinataire.id)
+            data = Facturier_ProfilSerializer(vendor).data
             return data
         else:
             return instance.destinataire.id
@@ -452,13 +515,13 @@ class PreTransactionFullSerializer(serializers.ModelSerializer):
     code_secret = serializers.CharField()
 
     class Meta:
-        model = Pre_Transaction
+        model = PreTransaction
         fields = '__all__'
 
     def get_expediteur(self, instance):
         data = {}
         if instance.expediteur.role == MyUser.CLIENT:
-            client = Client_DigiPay.objects.get(id=instance.expediteur.id)
+            client = ClientDigiPay.objects.get(id=instance.expediteur.id)
             data = CLientDigipay_ProfilSerializer(client).data
             return data
         elif instance.expediteur.role == MyUser.VENDOR:
@@ -487,17 +550,17 @@ class CagnoteSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class Transfert_CagnoteFullSerializer(serializers.ModelSerializer):
+class TransfertCagnoteFullSerializer(serializers.ModelSerializer):
     expediteur = serializers.SerializerMethodField()
     destinataire = serializers.SerializerMethodField()
 
     def get_expediteur(self, instance):
         data = {}
-        if instance.type_transaction == Transfert_Cagnote.CAGNOTE:
-            client = Client_DigiPay.objects.get(id=instance.expediteur)
+        if instance.type_transaction == TransfertCagnote.CAGNOTE:
+            client = ClientDigiPay.objects.get(id=instance.expediteur)
             data = CLientDigipay_ProfilSerializer(client).data
             return data
-        elif instance.type_transaction == Transfert_Cagnote.RECOLTE:
+        elif instance.type_transaction == TransfertCagnote.RECOLTE or instance.type_transaction == TransfertCagnote.CAGNOTE_ANNULE:
             cagnote = Cagnote.objects.get(id=instance.expediteur)
             data = CagnoteFullSerializer(cagnote).data
             return data
@@ -506,11 +569,11 @@ class Transfert_CagnoteFullSerializer(serializers.ModelSerializer):
 
     def get_destinataire(self, instance):
         data = {}
-        if instance.type_transaction == Transfert_Cagnote.RECOLTE:
-            client = Client_DigiPay.objects.get(id=instance.destinataire)
+        if instance.type_transaction == TransfertCagnote.RECOLTE or instance.type_transaction == TransfertCagnote.CAGNOTE_ANNULE:
+            client = ClientDigiPay.objects.get(id=instance.destinataire)
             data = CLientDigipay_ProfilSerializer(client).data
             return data
-        elif instance.type_transaction == Transfert_Cagnote.CAGNOTE:
+        elif instance.type_transaction == TransfertCagnote.CAGNOTE:
             cagnote = Cagnote.objects.get(id=instance.destinataire)
             data = CagnoteFullSerializer(cagnote).data
             return data
@@ -518,7 +581,7 @@ class Transfert_CagnoteFullSerializer(serializers.ModelSerializer):
             return instance.destinataire
 
     class Meta:
-        model = Transfert_Cagnote
+        model = TransfertCagnote
         fields = '__all__'
 
 
@@ -526,7 +589,7 @@ class ParticipationCagnoteSerializer(serializers.ModelSerializer):
     participant = UserSerializer()
 
     class Meta:
-        model = Participants_Cagnote
+        model = ParticipantsCagnote
         fields = '__all__'
 
 # Group payement
@@ -538,43 +601,32 @@ class Grp_PayementFullSerializer(serializers.ModelSerializer):
     responsable = UserSerializer()
 
     class Meta:
-        model = Group_Payement
+        model = GroupPayement
         fields = '__all__'
 
 
 class Grp_PayementSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = Group_Payement
+        model = GroupPayement
         fields = '__all__'
 
 # Beneficiaire grp payement
 
 
-class Beneficiares_GrpPayementFullSerializer(serializers.ModelSerializer):
+class BeneficiaresGrpPayementFullSerializer(serializers.ModelSerializer):
     beneficiaire = UserSerializer()
     grp_payement = Grp_PayementFullSerializer()
 
     class Meta:
-        model = Beneficiares_GrpPayement
+        model = BeneficiaresGrpPayement
         fields = '__all__'
 
 
-class Beneficiares_GrpPayementSerializer(serializers.ModelSerializer):
+class BeneficiaresGrpPayementSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = Beneficiares_GrpPayement
+        model = BeneficiaresGrpPayement
         fields = '__all__'
 
-
-'''
-# Participation Cagnote Serialiser
-class ParticipationCagnoteFullSerializer(serializers.ModelSerializer):
-    participant = UserSerializer()
-    cagnote = CagnoteFullSerializer()
-
-    class Meta:
-        model = Participants_Cagnote
-        fields = '__all__'
-'''
 # todo List , Update , Get , change pwsd :  ( create : responsable ) , employee , agent

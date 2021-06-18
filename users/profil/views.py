@@ -1,6 +1,6 @@
 from django.http import JsonResponse, HttpResponse
 from api.models import Agence
-from users.models import Client_DigiPay, Vendor, Transfert, Transaction, Pre_Transaction, Transfert_Direct, Client, MyUser, Responsable, Employee, Agent
+from users.models import ClientDigiPay, Vendor, Transfert, Transaction, PreTransaction, TransfertDirect, Client, MyUser, Responsable, Employee, Agent
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 import json
@@ -21,7 +21,7 @@ def valid_vendor_username(request):
             vendor_exist_tel = list(
                 Vendor.objects.filter(tel=str(data['username'])))
             client_exist_tel = list(
-                Client_DigiPay.objects.filter(tel=str(data['username'])))
+                ClientDigiPay.objects.filter(tel=str(data['username'])))
             responsable_exist_tel = list(
                 Responsable.objects.filter(tel=str(data['username'])))
             employe_exist_tel = list(

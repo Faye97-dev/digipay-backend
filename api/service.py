@@ -1,7 +1,7 @@
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from .models import HOST
 from django.http import JsonResponse, HttpResponse
-# from users.models import Transfert, Transaction, Client_DigiPay, Pre_Transaction
+# from users.models import Transfert, Transaction, ClientDigiPay, PreTransaction
 from users.models import *
 from users.serializers import ClientDigiPay_UserSerializer
 from rest_framework.decorators import api_view, permission_classes
@@ -17,7 +17,7 @@ def check_clientDigiPay(request):
     if request.method == 'POST':
         data = json.loads(request.body.decode('utf-8'))
         try:
-            sender = Client_DigiPay.objects.get(id=data['sender'])
+            sender = ClientDigiPay.objects.get(id=data['sender'])
             if str(sender.tel) == str(data['tel']):
                 result = {
                     'msg': 'le numéro de téléphone du client est similaire au numéro du compte utilisateur !'}
@@ -39,7 +39,7 @@ def check_clientDigiPay(request):
                 result = {'msg': "Ce numéro de téléphone n'est pas autorisé !"}
                 return JsonResponse(result, safe=False, status=200)
 
-            client = list(Client_DigiPay.objects.filter(tel=data['tel']))
+            client = list(ClientDigiPay.objects.filter(tel=data['tel']))
             if len(client) == 0:
                 result = {'client': data['tel'],
                           'check': False, 'montant': data['montant']}
@@ -84,9 +84,8 @@ def transactionListByUser(user):
         return res
 
     elif user.role == MyUser.CLIENT:
-        # handle some cases .... when expediteur is a digiPay client can do a transfert and retrait ??
         # block other type user vendor ,responsable , employee , agent de compensation
-        user = Client_DigiPay.objects.get(id=user.id)
+        user = ClientDigiPay.objects.get(id=user.id)
         client_fictif = Client.objects.get(id=user.client)
         ###
         retraits_agence = Transfert.objects.filter(expediteur=user.client)
@@ -103,18 +102,19 @@ def transactionListByUser(user):
         # transfert_agence = [item.id for item in list(
         #    Transfert.objects.filter(destinataire__id=user.client))]
         ###
-        paiements_masse = [item.id for item in list(Transfert_Direct.objects.distinct('numero_grp_payement').filter(
+        paiements_masse = [item.id for item in list(TransfertDirect.objects.distinct('numero_grp_payement').filter(
             expediteur=user, numero_grp_payement__isnull=False))]
-        # print(paiements_masse)
 
-        depenses = [item.id for item in list(Transfert_Direct.objects.filter(
+        depenses = [item.id for item in list(TransfertDirect.objects.filter(
             expediteur=user, numero_grp_payement__isnull=True))]
-        recettes = [item.id for item in list(Transfert_Direct.objects.filter(
+
+        recettes = [item.id for item in list(TransfertDirect.objects.filter(
             destinataire=user))]
 
-        donations = [item.id for item in list(Transfert_Cagnote.objects.filter(
+        donations = [item.id for item in list(TransfertCagnote.objects.filter(
             expediteur=user.id))]
-        recoltes = [item.id for item in list(Transfert_Cagnote.objects.filter(
+
+        recoltes = [item.id for item in list(TransfertCagnote.objects.filter(
             destinataire=user.id))]
 
         all_ = retraits_agence+recharges_agence + \
@@ -133,9 +133,9 @@ def transactionListByUser(user):
         recharges_agence = [item.id for item in list(
             recharges_agence) if item.agence_destination == item.agence_origine]
 
-        transferts = [item.id for item in list(Transfert_Direct.objects.filter(
+        transferts = [item.id for item in list(TransfertDirect.objects.filter(
             expediteur=user))]
-        retraits = [item.id for item in list(Transfert_Direct.objects.filter(
+        retraits = [item.id for item in list(TransfertDirect.objects.filter(
             destinataire=user))]
         res = Transaction.objects.filter(
             transaction__id__in=list(set(recharges_agence+transferts+retraits))).order_by('-date')
@@ -145,14 +145,25 @@ def transactionListByUser(user):
     elif user.role == MyUser.SYSADMIN:
         transferts_agences = [
             item.id for item in list(Transfert.objects.all())]
-        # transferts = [item.id for item in list(Transfert_Direct.objects.all())]
+        # transferts = [item.id for item in list(TransfertDirect.objects.all())]
         # pre-transactions ?
         res = Transaction.objects.filter(transaction__id__in=list(
             set(transferts_agences))).order_by('-date')
         print('transactions list SYSADMIN  .....')
         return res
+    elif user.role == MyUser.FACTURIER:
+        # transferts_agences = [
+        #    item.id for item in list(Transfert.objects.all())]
+        # transferts = [item.id for item in list(TransfertDirect.objects.all())]
+        # pre-transactions ?
+        res = Transaction.objects.filter(transaction__id__in=list(
+            set([]))).order_by('-date')
+        print('transactions list FACTURIER  .....')
+        return res
     else:
-        return []
+        res = Transaction.objects.filter(
+            transaction__id__in=[]).order_by('-date')
+        return res
 
 
 def compensationsListByUser(user):
@@ -182,12 +193,14 @@ def compensationsListByUser(user):
         print('compensations list SYSADMIN  .....')
         return res
     else:
-        return []
+        res = Transaction.objects.filter(
+            transaction__id__in=[]).order_by('-date')
+        return res
 
 
 def participationCagnoteListByUser(user):
     if user.role == MyUser.CLIENT:
-        res = Participants_Cagnote.objects.filter(
+        res = ParticipantsCagnote.objects.filter(
             participant=user)
         return res
     else:
@@ -195,9 +208,9 @@ def participationCagnoteListByUser(user):
 
 
 def paiement_masse_total(numero_grp_payement):
-    result = Transfert_Direct.objects.filter(
+    result = TransfertDirect.objects.filter(
         Q(numero_grp_payement=numero_grp_payement) &
-        (Q(status=Transfert_Direct.COMFIRMED) | Q(status=Transfert_Direct.WITHDRAWED))).aggregate(Sum('montant'))['montant__sum'] or 0
+        (Q(status=TransfertDirect.COMFIRMED) | Q(status=TransfertDirect.WITHDRAWED))).aggregate(Sum('montant'))['montant__sum'] or 0
     return result
 
 
@@ -212,24 +225,24 @@ def profile_statistiques(request, pk):
         payements_stats = [item.transaction.id for item in transations_list.filter(
             type_transaction=Transaction.PAIEMENT)]
 
-        payements_recus = Transfert_Direct.objects.filter(
+        payements_recus = TransfertDirect.objects.filter(
             Q(id__in=payements_stats) & Q(destinataire=user) &
-            (Q(status=Transfert_Direct.COMFIRMED) | Q(status=Transfert_Direct.WITHDRAWED))).aggregate(Sum('montant'))['montant__sum'] or 0
+            (Q(status=TransfertDirect.COMFIRMED) | Q(status=TransfertDirect.WITHDRAWED))).aggregate(Sum('montant'))['montant__sum'] or 0
 
-        payements_faits = Transfert_Direct.objects.filter(
+        payements_faits = TransfertDirect.objects.filter(
             Q(id__in=payements_stats) & Q(expediteur=user) &
-            (Q(status=Transfert_Direct.COMFIRMED) | Q(status=Transfert_Direct.WITHDRAWED))).aggregate(Sum('montant'))['montant__sum'] or 0
+            (Q(status=TransfertDirect.COMFIRMED) | Q(status=TransfertDirect.WITHDRAWED))).aggregate(Sum('montant'))['montant__sum'] or 0
         ###
         remboursements_stats = [item.transaction.id for item in transations_list.filter(
             type_transaction=Transaction.REMBOURSEMENT)]
 
-        remboursements_recus = Transfert_Direct.objects.filter(
+        remboursements_recus = TransfertDirect.objects.filter(
             Q(id__in=remboursements_stats) & Q(destinataire=user) &
-            (Q(status=Transfert_Direct.COMFIRMED) | Q(status=Transfert_Direct.WITHDRAWED))).aggregate(Sum('montant'))['montant__sum'] or 0
+            (Q(status=TransfertDirect.COMFIRMED) | Q(status=TransfertDirect.WITHDRAWED))).aggregate(Sum('montant'))['montant__sum'] or 0
 
-        remboursements_faits = Transfert_Direct.objects.filter(
+        remboursements_faits = TransfertDirect.objects.filter(
             Q(id__in=remboursements_stats) & Q(expediteur=user) &
-            (Q(status=Transfert_Direct.COMFIRMED) | Q(status=Transfert_Direct.WITHDRAWED))).aggregate(Sum('montant'))['montant__sum'] or 0
+            (Q(status=TransfertDirect.COMFIRMED) | Q(status=TransfertDirect.WITHDRAWED))).aggregate(Sum('montant'))['montant__sum'] or 0
         ###
         recharges_stats = [item.transaction.id for item in transations_list.filter(
             type_transaction=Transaction.RECHARGE)]
@@ -252,34 +265,34 @@ def profile_statistiques(request, pk):
                   'recharges': recharges, 'retraits': retraits}
 
     elif user.role == MyUser.CLIENT:
-        user = Client_DigiPay.objects.get(id=user.id)
+        user = ClientDigiPay.objects.get(id=user.id)
         client_fictif = Client.objects.get(id=user.client)
 
         payements_stats = [item.transaction.id for item in transations_list.filter(
             type_transaction=Transaction.PAIEMENT)]
 
-        payements_faits = Transfert_Direct.objects.filter(
+        payements_faits = TransfertDirect.objects.filter(
             Q(id__in=payements_stats) &
-            (Q(status=Transfert_Direct.COMFIRMED) | Q(status=Transfert_Direct.WITHDRAWED))).aggregate(Sum('montant'))['montant__sum'] or 0
+            (Q(status=TransfertDirect.COMFIRMED) | Q(status=TransfertDirect.WITHDRAWED))).aggregate(Sum('montant'))['montant__sum'] or 0
 
         ###
         remboursements_stats = [item.transaction.id for item in transations_list.filter(
             type_transaction=Transaction.REMBOURSEMENT)]
-        remboursements_recus = Transfert_Direct.objects.filter(
+        remboursements_recus = TransfertDirect.objects.filter(
             Q(id__in=remboursements_stats) &
-            (Q(status=Transfert_Direct.COMFIRMED) | Q(status=Transfert_Direct.WITHDRAWED))).aggregate(Sum('montant'))['montant__sum'] or 0
+            (Q(status=TransfertDirect.COMFIRMED) | Q(status=TransfertDirect.WITHDRAWED))).aggregate(Sum('montant'))['montant__sum'] or 0
 
         ###
         envoies_stats = [item.transaction.id for item in transations_list.filter(
             type_transaction=Transaction.ENVOI)]
 
-        envoies_recus = Transfert_Direct.objects.filter(
+        envoies_recus = TransfertDirect.objects.filter(
             Q(id__in=envoies_stats) & Q(destinataire=user) &
-            (Q(status=Transfert_Direct.COMFIRMED) | Q(status=Transfert_Direct.WITHDRAWED))).aggregate(Sum('montant'))['montant__sum'] or 0
+            (Q(status=TransfertDirect.COMFIRMED) | Q(status=TransfertDirect.WITHDRAWED))).aggregate(Sum('montant'))['montant__sum'] or 0
 
-        envoies_faits = Transfert_Direct.objects.filter(
+        envoies_faits = TransfertDirect.objects.filter(
             Q(id__in=envoies_stats) & Q(expediteur=user) &
-            (Q(status=Transfert_Direct.COMFIRMED) | Q(status=Transfert_Direct.WITHDRAWED))).aggregate(Sum('montant'))['montant__sum'] or 0
+            (Q(status=TransfertDirect.COMFIRMED) | Q(status=TransfertDirect.WITHDRAWED))).aggregate(Sum('montant'))['montant__sum'] or 0
         ###
         recharges_stats = [item.transaction.id for item in transations_list.filter(
             type_transaction=Transaction.RECHARGE)]

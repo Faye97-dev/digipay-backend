@@ -2,7 +2,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.http import JsonResponse, HttpResponse
 from .actions import transfert, retrait, recharge, retrait_par_code, confirmer_compensation, annuler_compensation
 from api.models import Agence
-from users.models import Client_DigiPay, Vendor, Transfert, Transaction, Pre_Transaction, Transfert_Direct, Client
+from users.models import ClientDigiPay, Vendor, Transfert, Transaction, PreTransaction, TransfertDirect, Client
 from users.serializers import ClientDigiPay_UserSerializer, Vendor_UserSerializer
 from api.serializers import TransfertFullSerializer, ClientSerializer
 from users.serializers import PreTransactionFullSerializer
@@ -17,7 +17,6 @@ import json
 def agence_transfert(request):
     if request.method == 'POST':
         data = json.loads(request.body.decode('utf-8'))
-        # print(data)
         try:
             agence_origine = Agence.objects.get(id=data['agence_origine'])
             result = transfert(agence_origine, data)
@@ -50,7 +49,7 @@ def check_byRole_ClientVendor(request):
     if request.method == 'POST':
         data = json.loads(request.body.decode('utf-8'))
         try:
-            client = list(Client_DigiPay.objects.filter(tel=data['tel']))
+            client = list(ClientDigiPay.objects.filter(tel=data['tel']))
             vendor = list(Vendor.objects.filter(tel=data['tel']))
             result = {}
             if len(client) != 0:
@@ -118,8 +117,8 @@ def transactions_a_retirer(request):
             retraits = Transfert.objects.filter(
                 destinataire__tel=data['tel'], status=Transfert.NOT_WITHDRAWED).order_by('-date_creation')
             '''
-            pre_retraits = Pre_Transaction.objects.filter(
-                type_transaction=Pre_Transaction.RETRAIT, status=Pre_Transaction.TO_VALIDATE, destinataire=data['tel']).order_by('-date_creation')
+            pre_retraits = PreTransaction.objects.filter(
+                type_transaction=PreTransaction.RETRAIT, status=PreTransaction.TO_VALIDATE, destinataire=data['tel']).order_by('-date_creation')
             #print(retraits, pre_retraits)
 
             result = TransfertFullSerializer(
@@ -183,7 +182,7 @@ def check_client_anonyme(request):
                     return JsonResponse({'msg': "numéro de téléphone non autorisé !"}, safe=False, status=201)
                 else:
                     clients_digipay = [
-                        item.client for item in Client_DigiPay.objects.all()]
+                        item.client for item in ClientDigiPay.objects.all()]
                     if client_anonyme[0].id in clients_digipay:
                         result = ClientSerializer(client_anonyme[0]).data
                         result['digipay'] = True

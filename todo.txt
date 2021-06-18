@@ -1,0 +1,88 @@
+Front-End :
+** FormClientsend and other Form : reset all form, item , showinfo to null , change submiting to the second step
+** Sync premiumRoutes with Routes
+** rest api refactor all post body before send
+** separer les notifications selon le type de user 
+** form validation front max length of text input type
+** apply same validation of FormProfilService for other Profil
+
+Back-End:
+- frais models conception and views  
+- recharge credit models conception 
+
+** refont code client envoie , refactor pre-transction action in models , remove serializer , remove clotures
+** move check_clientdigipay to view.py in client folder , clean files (service , actions ) in api folder
+** clean models file 
+** sort data by date transaction to whithdrawed
+
+- crontab retrait timeout , livraison ....
+- identifiant random on register for all type users
+- change primary key auto-increment of all models to uuid or random
+- code transaction random format or uuid
+** store all proprety attributes in db  : ( code de transaction ....)
+** remove attribute frais in  model agence , cloture
+
+** restric serializer models 
+** some attribute in serializers to readonly or writeonly
+** remove register of admin user and secure permission of other type users
+- differencier un service avec un commercant ??
+
+- atomic transaction backend 
+** backend validation form
+** check a status account if is active before traitement for all actions
+** block api permissions by user
+** delete notif client and vendor after livraison done
+** review of all queryset filter when attribute is an integer
+
+** check refresh token before logout , refactor logout 
+- remove refresh token , access token to 5 min
+- validate pattern password format backend and frontend
+- client pattern password secure to number type front and back
+- form validation backend 
+- traduction nofication en arabe
+
+** on update customer or vendor : username = tel and client anonymus tel ,
+** qrcode notification not showing on prod
+
+Performance:
+- Frontend:
+    - remove duplicates fetch
+    - remove the switcher
+    - routes changement warning
+    - remove unsed import and warning 
+    - datatable niveau 3 , connect filter data with db , change mouse cursor on ordering datatable ??
+    - diconnect agence when logout , logout message de confirmation ??
+    - asyn file handle forbidden issue 
+    - add comment 
+    - sync notifications with actions
+    - statistiques actions  move it to redux ?? ,
+    - use custom Switch in vendor history and other
+- Backend:
+    - merge migrations files on digiPay backend
+    - add comment 
+    - agence anonyme retrait add confirmation code ....
+    - hash code payement , ??
+    - Custom django Admin ,  __str__
+    - move Django Admin to SysAdmin backend
+
+Security:
+- allowed host and corsheaders 
+- check Report of security enginner
+- brut force login
+- post and get : id post body or get params
+- profile statistique change get a to post request (id in params)
+- delete user when token is alive ( Django Admin )
+- block login when token is alive 
+- can kill all alives token  
+- logs
+- permissions in sysAdmin
+- tracablity of actions
+- block login if a token with active
+
+########
+- routes defaut component
+- separate login in two files mobile and web
+- check existant token refresh in different applicationclient or admin
+- disable facturier edit name
+- asyn action to somelec api : keys api , check token live before , and different messages in each cases
+- when time to access token is small refresh token before do any actions
